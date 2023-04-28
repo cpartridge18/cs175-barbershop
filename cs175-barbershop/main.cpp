@@ -5,6 +5,14 @@
 //  Created by Chris Partridge on 4/28/23.
 //
 
+// TODO:
+// 1. Add clippers object
+// 2. Remove extraneous code (animation? key controllers? robots?)
+// 3. Make head
+// 3. profit
+
+
+
 ////////////////////////////////////////////////////////////////////////
 //
 //   Harvard University
@@ -43,8 +51,8 @@
 #include "picker.h"
 #include "mesh.h"
 
-#include <filesystem>
-namespace fs = std::filesystem;
+//#include <filesystem>
+//namespace fs = std::filesystem;
 
 using namespace std;
 
@@ -121,7 +129,7 @@ static std::vector<Cvec3>
 
 // --------- Materials
 static shared_ptr<Material> g_redDiffuseMat, g_blueDiffuseMat, g_bumpFloorMat,
-    g_arcballMat, g_pickingMat, g_lightMat;
+    g_arcballMat, g_pickingMat, g_lightMat, g_shaverMat;
 
 shared_ptr<Material> g_overridingMaterial;
 
@@ -135,7 +143,7 @@ static shared_ptr<Geometry> g_ground, g_cube, g_sphere;
 
 static shared_ptr<SgRootNode> g_world;
 static shared_ptr<SgRbtNode> g_skyNode, g_groundNode, g_robot1Node,
-    g_robot2Node, g_light1, g_light2;
+    g_robot2Node, g_light1, g_light2, g_shaverNode;
 
 static shared_ptr<SgRbtNode> g_currentCameraNode;
 static shared_ptr<SgRbtNode> g_currentPickedRbtNode;
@@ -1123,7 +1131,14 @@ static void initMaterials() {
     // copy solid prototype, and set to color white
     g_lightMat.reset(new Material(solid));
     g_lightMat->getUniforms().put("uColor", Cvec3f(1, 1, 1));
-
+    
+    g_shaverMat.reset(new Material("./shaders/normal-gl3.vshader",
+                                   "./shaders/normal-gl3.fshader"));
+    g_shaverMat->getUniforms().put("uTexColor", shared_ptr<ImageTexture>(new ImageTexture("Clippers.ppm", true)));
+    g_shaverMat->getUniforms().put(
+        "uTexNormal", shared_ptr<ImageTexture>(
+                          new ImageTexture("FieldstoneNormal.ppm", false)));
+    
     // pick shader
     g_pickingMat.reset(new Material("./shaders/basic-gl3.vshader",
                                     "./shaders/pick-gl3.fshader"));
@@ -1327,6 +1342,9 @@ static void initScene() {
 
     constructRobot(g_robot1Node, g_redDiffuseMat);  // a Red robot
     constructRobot(g_robot2Node, g_blueDiffuseMat); // a Blue robot
+    
+    g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-6, 1, 0))));
+    g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_cube, g_shaverMat, Cvec3(0), Cvec3(0), Cvec3(1, 1.5, 0.25))));
 
     g_light1.reset(new SgRbtNode(RigTForm(Cvec3(4.0, 3.0, 5.0))));
     g_light2.reset(new SgRbtNode(RigTForm(Cvec3(-4, 1.0, -4.0))));
@@ -1363,8 +1381,8 @@ static void initScene() {
     g_world->addChild(g_robot2Node);
     g_world->addChild(g_light1);
     g_world->addChild(g_light2);
-
     g_world->addChild(g_bunnyNode);
+    g_world->addChild(g_shaverNode);
     
     g_currentCameraNode = g_skyNode;
 }
@@ -1395,11 +1413,6 @@ static void glfwLoop() {
 }
 
 int main(int argc, char *argv[]) {
-//    std::cout << "Current path is " << fs::current_path() << '\n';
-//
-//    fs::current_path("/Users/cpartridge/cs175/cs175-barbershop/cs175-barbershop/");
-//    std::cout << "Current path is " << fs::current_path() << '\n';
-    
     
     try {
 

@@ -102,6 +102,7 @@
 		E420ED8129FC5B7700E1496D /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		E420ED8229FC5BE600E1496D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		E420ED9B29FC5F9600E1496D /* shaders */ = {isa = PBXFileReference; lastKnownFileType = folder; path = shaders; sourceTree = "<group>"; };
+		E420ED9C29FC6A9F00E1496D /* Clippers.ppm */ = {isa = PBXFileReference; lastKnownFileType = text; path = Clippers.ppm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,6 +126,7 @@
 				E420ED9B29FC5F9600E1496D /* shaders */,
 				E420ED8229FC5BE600E1496D /* Makefile */,
 				E420ED8129FC5B7700E1496D /* main.cpp */,
+				E420ED9C29FC6A9F00E1496D /* Clippers.ppm */,
 				E420ED5B29FC5AED00E1496D /* arcball.h */,
 				E420ED6E29FC5AEE00E1496D /* asstcommon.h */,
 				E420ED4E29FC5AEC00E1496D /* bunny.mesh */,
