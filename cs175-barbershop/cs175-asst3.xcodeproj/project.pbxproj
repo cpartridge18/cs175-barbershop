@@ -179,6 +179,9 @@
 		4E5E744D2A057A2A005B20D2 /* trump.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = trump.mesh; sourceTree = "<group>"; };
 		4E5E744E2A05880E005B20D2 /* tyrion.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion.mesh; sourceTree = "<group>"; };
 		4E5E744F2A058B28005B20D2 /* tyrion_head.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_head.mesh; sourceTree = "<group>"; };
+		4E5E74502A0597EE005B20D2 /* tyrion_nohair.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_nohair.mesh; sourceTree = "<group>"; };
+		4E5E74512A05A000005B20D2 /* trimmer.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = trimmer.mesh; sourceTree = "<group>"; };
+		4E5E74522A05AC36005B20D2 /* tyrionhead.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrionhead.mesh; sourceTree = "<group>"; };
 		4EDCBCCD29D77FDC00FC3596 /* libglfw.3.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libglfw.3.3.dylib; sourceTree = "<group>"; };
 		4EDCBCCE29D77FDC00FC3596 /* libGLEW.2.2.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libGLEW.2.2.0.dylib; sourceTree = "<group>"; };
 		4EF929CF29B7D89B0046FAC1 /* libGLEW.2.2.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGLEW.2.2.0.dylib; path = ../../../../../../usr/local/Cellar/glew/2.2.0_1/lib/libGLEW.2.2.0.dylib; sourceTree = "<group>"; };
@@ -388,6 +391,9 @@
 				4E5E74092A0422AF005B20D2 /* lib */,
 				4E5E74072A0422AF005B20D2 /* main */,
 				4E5E741A2A0422AF005B20D2 /* main.cpp */,
+				4E5E74522A05AC36005B20D2 /* tyrionhead.mesh */,
+				4E5E74512A05A000005B20D2 /* trimmer.mesh */,
+				4E5E74502A0597EE005B20D2 /* tyrion_nohair.mesh */,
 				4E5E744F2A058B28005B20D2 /* tyrion_head.mesh */,
 				4E5E744C2A056DD4005B20D2 /* output.mesh */,
 				4E5E741B2A0422AF005B20D2 /* main.o */,

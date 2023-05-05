@@ -95,7 +95,7 @@ static bool g_pickingMode = false;
 static bool g_playingAnimation = false;
 
 // Material
-static shared_ptr<Material> g_bunnyMat; // for the bunny
+static shared_ptr<Material> g_bunnyMat, g_chairMat; // for the bunny
 
 static vector<shared_ptr<Material>> g_bunnyShellMats; // for bunny shells
 
@@ -105,12 +105,12 @@ static double g_furHeight = 0.21;
 static double g_hairyness = 0.7;
 static bool g_shellNeedsUpdate = false;
 
-static shared_ptr<SimpleGeometryPN> g_bunnyGeometry, g_headGeometry, g_headNoHairGeometry;
+static shared_ptr<SimpleGeometryPN> g_bunnyGeometry, g_headGeometry, g_headNoHairGeometry, g_trimmerGeometry, g_chairGeometry;
 static vector<shared_ptr<SimpleGeometryPNX>> g_bunnyShellGeometries, g_headShellGeometries;
-static Mesh g_bunnyMesh, g_headMesh, g_headNoHairMesh;
+static Mesh g_bunnyMesh, g_headMesh, g_headNoHairMesh, g_trimmerMesh, g_chairMesh;
 
 // New Scene node
-static shared_ptr<SgRbtNode> g_bunnyNode;
+static shared_ptr<SgRbtNode> g_bunnyNode, g_chairNode;
 
 // For Simulation
 static double g_lastFrameClock;
@@ -462,63 +462,11 @@ static void updateShellGeometry() {
     RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
     
     for (int k = 0; k < g_numShells; k++) {
-//        vector<VertexPNX> vec;
-//        vec.reserve(g_bunnyMesh.getNumFaces() * 3);
-//
-//        obj = getPathAccumRbt(g_world, g_bunnyNode);
-//
-//
-//        for (int i = 0; i < g_bunnyMesh.getNumFaces(); i++) {
-//            for (int j = 0; j < g_bunnyMesh.getFace(i).getNumVertices(); j++) {
-//                Mesh::Vertex v = g_bunnyMesh.getFace(i).getVertex(j);
-//                Cvec2 texCoords;
-//
-//
-//                Cvec3 p = v.getPosition();
-//                Cvec3 norm = v.getNormal();
-//                Cvec3 t = g_tipPos[(i*3)+j];
-//                Cvec3 s = p + (norm*g_furHeight);
-//
-//                // translate t into object coordinates
-//                Cvec3 newt = (inv(obj) * RigTForm(t)).getTranslation();
-//
-//                Cvec3 n = (s - p) / g_numShells;
-//                // TODO: Calculate p
-////                Cvec3 pi1 = p + (n * (k+1));
-//
-//                Cvec3 d = ((newt - p - (n * g_numShells)) / (g_numShells*(g_numShells-1)))*2;
-//
-//                double sum = ((k - 1)*(k)) / 2;
-//                Cvec3 p_i = p + (n * k) + (d * sum);
-//
-//                if (j == 0) {
-//                    texCoords = Cvec2(0,0);
-//                } else if (j == 1) {
-//                    texCoords = Cvec2(g_hairyness, 0);
-//                } else {
-//                    texCoords = Cvec2(0, g_hairyness);
-//                }
-//                double sum_minus = ((k - 2)*(k-1)) / 2;
-//                if (k == 0 ) {
-//                    sum_minus = 0;
-//                }
-//                if (k == 1) {
-//                    sum_minus = 1;
-//                }
-//                Cvec3 p_i_minus = p + (n * (k-1)) + (d * sum_minus);
-//                Cvec3 normal = (p_i - p_i_minus);
-//                VertexPNX vertex = VertexPNX(p_i, normal, texCoords);
-//                // Make VertexPN
-//                vec.push_back(vertex);
-//            }
-//        }
-//        VertexPNX* v = &vec[0];
-//        g_bunnyShellGeometries[k]->upload(v, g_bunnyMesh.getNumFaces() * 3);
         
         obj = getPathAccumRbt(g_world, g_headNode);
 
         vector<VertexPNX> vec2;
-        vec2.reserve(g_headMesh.getNumFaces() * 4);
+        vec2.reserve(g_headMesh.getNumFaces() * 3);
         
         for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
             for (int j = 0; j < g_headMesh.getFace(i).getNumVertices(); j++) {
@@ -565,7 +513,7 @@ static void updateShellGeometry() {
             }
         }
         VertexPNX* v2 = &vec2[0];
-        g_headShellGeometries[k]->upload(v2, g_headMesh.getNumFaces() * 4);
+        g_headShellGeometries[k]->upload(v2, g_headMesh.getNumFaces() * 3);
     }
     
     g_shellNeedsUpdate = false;
@@ -1247,6 +1195,10 @@ static void initMaterials() {
                                   "./shaders/bunny-gl3.fshader"));
     g_bunnyMat->getUniforms().put("uColorAmbient", Cvec3f(0.45f, 0.3f, 0.3f))
                              .put("uColorDiffuse", Cvec3f(0.2f, 0.2f, 0.2f));
+    
+    // copy solid prototype, and set to color white
+    g_chairMat.reset(new Material(diffuse));
+    g_chairMat->getUniforms().put("uColor", Cvec3f(0.2, 0.2, 0.2));
 
     // bunny shell materials;
     // common shell texture:
@@ -1359,13 +1311,33 @@ static void initNormals(Mesh &m) {
     }
 }
 
+static void initGeo(Mesh &m, shared_ptr<SimpleGeometryPN> &g) {
+    vector<VertexPN> vec;
+    vec.reserve(m.getNumFaces() * 3);
+    
+    for (int i = 0; i < m.getNumFaces(); i++) {
+        for (int j = 0; j < m.getFace(i).getNumVertices(); j++) {
+            Mesh::Vertex v = m.getFace(i).getVertex(j);
+            VertexPN vertex = VertexPN(v.getPosition(), v.getNormal());
+            // Make VertexPN
+            vec.push_back(vertex);
+        }
+    }
+    g.reset(new SimpleGeometryPN);
+    
+    VertexPN* vertices = &vec[0];
+    g->upload(vertices, m.getNumFaces() * 3);
+}
+
 // New function that loads the bunny mesh and initializes the bunny shell meshes
 static void initHeadMeshes() {
-    g_headMesh.load("tyrion_head.mesh");
-    g_headNoHairMesh.load("tyrion.mesh");
+    g_headMesh.load("tyrionhead.mesh");
+    g_headNoHairMesh.load("tyrion_nohair.mesh");
+    g_trimmerMesh.load("trimmer.mesh");
+    g_chairMesh.load("chair.mesh");
     
-
-    //g_headMesh.subdivide();
+ 
+    //g_headMesh.subdivide();  
     // TODO: Init the per vertex normal of g_bunnyMesh; see "calculating
     // normals" section of spec
     // ...
@@ -1375,66 +1347,20 @@ static void initHeadMeshes() {
     
     initNormals(g_headMesh);
     initNormals(g_headNoHairMesh);
+    initNormals(g_trimmerMesh);
+    initNormals(g_chairMesh);
     
-//    for (int i = 0; i < g_headMesh.getNumVertices(); ++i) {
-//      const Mesh::Vertex v = g_headMesh.getVertex(i);
-//
-//      Cvec3 avg_normal;
-//      int counter = 0;
-//
-//      Mesh::VertexIterator it(v.getIterator()), it0(it);
-//      do
-//      {
-//          cerr << counter << "\n";
-//          avg_normal += (it.getFace().getNormal());      // can use here it.getVertex(), it.getFace()
-//          counter++;
-//      }
-//      while (++it != it0); // go around once the 1ring
-//
-//      avg_normal /= counter;
-//
-//      v.setNormal(avg_normal);
-//    }
-
     // TODO: Initialize g_bunnyGeometry from g_bunnyMesh; see "mesh preparation"
     // section of spec
     // ...
     
+    initGeo(g_headMesh, g_headGeometry);
+    initGeo(g_headNoHairMesh, g_headNoHairGeometry);
+    initGeo(g_trimmerMesh, g_trimmerGeometry);
+    initGeo(g_chairMesh, g_chairGeometry);
+    
     cerr << "DOES THIS HAPPEN? " << "\n";
-    
-    vector<VertexPN> vec;
-    vec.reserve(g_headMesh.getNumFaces() * 4);
-    
-    for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
-        for (int j = 0; j < g_headMesh.getFace(i).getNumVertices(); j++) {
-            Mesh::Vertex v = g_headMesh.getFace(i).getVertex(j);
-            VertexPN vertex = VertexPN(v.getPosition(), v.getNormal());
-            // Make VertexPN
-            vec.push_back(vertex);
-        }
-    }
-    g_headGeometry.reset(new SimpleGeometryPN);
-    
-    VertexPN* vertices = &vec[0];
-    g_headGeometry->upload(vertices, g_headMesh.getNumFaces() * 4);
-    
-    vector<VertexPN> vec2;
-    vec2.reserve(g_headNoHairMesh.getNumFaces() * 4);
-    
-    for (int i = 0; i < g_headNoHairMesh.getNumFaces(); i++) {
-        for (int j = 0; j < g_headNoHairMesh.getFace(i).getNumVertices(); j++) {
-            Mesh::Vertex v = g_headNoHairMesh.getFace(i).getVertex(j);
-            VertexPN vertex = VertexPN(v.getPosition(), v.getNormal());
-            // Make VertexPN
-            vec2.push_back(vertex);
-        }
-    }
-    g_headNoHairGeometry.reset(new SimpleGeometryPN);
-    
-    VertexPN* vertices2 = &vec2[0];
-    g_headNoHairGeometry->upload(vertices2, g_headNoHairMesh.getNumFaces() * 4);
-
-
+ 
 
 
     // Now allocate array of SimpleGeometryPNX to for shells, one per layer
@@ -1549,21 +1475,24 @@ static void initScene() {
 
     //constructRobot(g_robot1Node, g_redDiffuseMat);  // a Red robot
     //constructRobot(g_robot2Node, g_blueDiffuseMat); // a Blue robot
-    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
+    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4, -2))));
     // add bunny as a shape nodes
     g_headNode->addChild(
-        shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat)));
-    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat)));
+        shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat, Cvec3(0, 0, 0), Cvec3(0, 180, 0), Cvec3(1))));
   
     // add each shell as shape node
     for (int i = 0; i < g_numShells; ++i) {
         g_headNode->addChild(shared_ptr<MyShapeNode>(
-            new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i])));
+            new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i], Cvec3(0), Cvec3(0, 180, 0), Cvec3(1))));
     }
+    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat, Cvec3(0, -0.5, -0.3), Cvec3(0, 180, 0), Cvec3(1))));
     
     
+    g_chairNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
+    g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 2, 0.6), Cvec3(0, 180, 0), Cvec3(2))));
+     
     g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-6, 1, 0))));
-    g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_cube, g_shaverMat, Cvec3(0), Cvec3(0), Cvec3(1, 1.5, 0.25))));
+    g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_trimmerGeometry, g_bunnyMat, Cvec3(0), Cvec3(0), Cvec3(1, 1.5, 0.25))));
 
     g_light1.reset(new SgRbtNode(RigTForm(Cvec3(4.0, 3.0, 5.0))));
     g_light2.reset(new SgRbtNode(RigTForm(Cvec3(-4, 1.0, -4.0))));
@@ -1604,6 +1533,7 @@ static void initScene() {
     g_world->addChild(g_light2);
     g_world->addChild(g_bunnyNode);
     g_world->addChild(g_shaverNode);
+    g_world->addChild(g_chairNode);
     
     g_currentCameraNode = g_skyNode;
 }
