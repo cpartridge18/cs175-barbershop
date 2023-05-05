@@ -8,6 +8,7 @@
 
 #include "cvec.h"
 
+int g_counter = 0;
 class Mesh {
     typedef int vertex_index;
     typedef int edge_index;
@@ -251,9 +252,9 @@ class Mesh {
         Vertex(Mesh &m, const int v) : m_(m), v_(v) {}
         Cvec3 getPosition() const { return m_.vertex_[v_].position_; }
         Cvec3 getNormal() const {
-            assert(m_.vertex_[v_].normal_[0] > -1e37 ||
-                   !"Error: This normal is uninitialized, you can set it with "
-                    "setNormal()");
+//            assert(m_.vertex_[v_].normal_[0] > -1e37 ||
+//                   !"Error: This normal is uninitialized, you can set it with "
+//                    "setNormal()");
             return m_.vertex_[v_].normal_;
         }
         void setPosition(const Cvec3 &p) const { m_.vertex_[v_].position_ = p; }

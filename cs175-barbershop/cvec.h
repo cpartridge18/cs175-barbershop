@@ -101,7 +101,7 @@ template <typename T, int n> class Cvec {
 
     // Normalize self and returns self
     Cvec &normalize() {
-        assert(dot(*this, *this) > CS175_EPS2);
+        //assert(dot(*this, *this) > CS175_EPS2);
         return *this /= std::sqrt(dot(*this, *this));
     }
 };

@@ -105,9 +105,9 @@ static double g_furHeight = 0.21;
 static double g_hairyness = 0.7;
 static bool g_shellNeedsUpdate = false;
 
-static shared_ptr<SimpleGeometryPN> g_bunnyGeometry, g_headGeometry;
+static shared_ptr<SimpleGeometryPN> g_bunnyGeometry, g_headGeometry, g_headNoHairGeometry;
 static vector<shared_ptr<SimpleGeometryPNX>> g_bunnyShellGeometries, g_headShellGeometries;
-static Mesh g_bunnyMesh, g_headMesh;
+static Mesh g_bunnyMesh, g_headMesh, g_headNoHairMesh;
 
 // New Scene node
 static shared_ptr<SgRbtNode> g_bunnyNode;
@@ -462,58 +462,58 @@ static void updateShellGeometry() {
     RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
     
     for (int k = 0; k < g_numShells; k++) {
-        vector<VertexPNX> vec;
-        vec.reserve(g_bunnyMesh.getNumFaces() * 3);
-        
-        obj = getPathAccumRbt(g_world, g_bunnyNode); 
-
-
-        for (int i = 0; i < g_bunnyMesh.getNumFaces(); i++) {
-            for (int j = 0; j < g_bunnyMesh.getFace(i).getNumVertices(); j++) {
-                Mesh::Vertex v = g_bunnyMesh.getFace(i).getVertex(j);
-                Cvec2 texCoords;
-
-
-                Cvec3 p = v.getPosition();
-                Cvec3 norm = v.getNormal();
-                Cvec3 t = g_tipPos[(i*3)+j];
-                Cvec3 s = p + (norm*g_furHeight);
-
-                // translate t into object coordinates
-                Cvec3 newt = (inv(obj) * RigTForm(t)).getTranslation();
-
-                Cvec3 n = (s - p) / g_numShells;
-                // TODO: Calculate p
-//                Cvec3 pi1 = p + (n * (k+1));
-
-                Cvec3 d = ((newt - p - (n * g_numShells)) / (g_numShells*(g_numShells-1)))*2;
-
-                double sum = ((k - 1)*(k)) / 2;
-                Cvec3 p_i = p + (n * k) + (d * sum);
-
-                if (j == 0) {
-                    texCoords = Cvec2(0,0);
-                } else if (j == 1) {
-                    texCoords = Cvec2(g_hairyness, 0);
-                } else {
-                    texCoords = Cvec2(0, g_hairyness);
-                }
-                double sum_minus = ((k - 2)*(k-1)) / 2;
-                if (k == 0 ) {
-                    sum_minus = 0;
-                }
-                if (k == 1) {
-                    sum_minus = 1;
-                }
-                Cvec3 p_i_minus = p + (n * (k-1)) + (d * sum_minus);
-                Cvec3 normal = (p_i - p_i_minus);
-                VertexPNX vertex = VertexPNX(p_i, normal, texCoords);
-                // Make VertexPN
-                vec.push_back(vertex);
-            }
-        }
-        VertexPNX* v = &vec[0];
-        g_bunnyShellGeometries[k]->upload(v, g_bunnyMesh.getNumFaces() * 3);
+//        vector<VertexPNX> vec;
+//        vec.reserve(g_bunnyMesh.getNumFaces() * 3);
+//
+//        obj = getPathAccumRbt(g_world, g_bunnyNode);
+//
+//
+//        for (int i = 0; i < g_bunnyMesh.getNumFaces(); i++) {
+//            for (int j = 0; j < g_bunnyMesh.getFace(i).getNumVertices(); j++) {
+//                Mesh::Vertex v = g_bunnyMesh.getFace(i).getVertex(j);
+//                Cvec2 texCoords;
+//
+//
+//                Cvec3 p = v.getPosition();
+//                Cvec3 norm = v.getNormal();
+//                Cvec3 t = g_tipPos[(i*3)+j];
+//                Cvec3 s = p + (norm*g_furHeight);
+//
+//                // translate t into object coordinates
+//                Cvec3 newt = (inv(obj) * RigTForm(t)).getTranslation();
+//
+//                Cvec3 n = (s - p) / g_numShells;
+//                // TODO: Calculate p
+////                Cvec3 pi1 = p + (n * (k+1));
+//
+//                Cvec3 d = ((newt - p - (n * g_numShells)) / (g_numShells*(g_numShells-1)))*2;
+//
+//                double sum = ((k - 1)*(k)) / 2;
+//                Cvec3 p_i = p + (n * k) + (d * sum);
+//
+//                if (j == 0) {
+//                    texCoords = Cvec2(0,0);
+//                } else if (j == 1) {
+//                    texCoords = Cvec2(g_hairyness, 0);
+//                } else {
+//                    texCoords = Cvec2(0, g_hairyness);
+//                }
+//                double sum_minus = ((k - 2)*(k-1)) / 2;
+//                if (k == 0 ) {
+//                    sum_minus = 0;
+//                }
+//                if (k == 1) {
+//                    sum_minus = 1;
+//                }
+//                Cvec3 p_i_minus = p + (n * (k-1)) + (d * sum_minus);
+//                Cvec3 normal = (p_i - p_i_minus);
+//                VertexPNX vertex = VertexPNX(p_i, normal, texCoords);
+//                // Make VertexPN
+//                vec.push_back(vertex);
+//            }
+//        }
+//        VertexPNX* v = &vec[0];
+//        g_bunnyShellGeometries[k]->upload(v, g_bunnyMesh.getNumFaces() * 3);
         
         obj = getPathAccumRbt(g_world, g_headNode);
 
@@ -627,35 +627,35 @@ static void hairsSimulationUpdate() {
     // TASK 2 TODO: write dynamics simulation code here
     
     // bunny coordinates
-    RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
-
-    for (int j = 0; j < g_numStepsPerFrame; j++) {
-        for (int i = 0; i < g_tipPos.size(); i++) {
-            // 3i, 3i + 1, 3i + 2
-            Mesh::Vertex v = g_bunnyMesh.getFace(floor(i / 3)).getVertex(i % 3);
-            Cvec2 texCoords;
-
-            // take p in world coords
-            Cvec3 p = v.getPosition();
-            Cvec3 nor = v.getNormal();
-
-            Cvec3 s = p + (nor * g_furHeight);
-            
-            s = (obj * RigTForm(s)).getTranslation();
-            p = (obj * RigTForm(p)).getTranslation();
-
-            Cvec3 total_force = g_gravity + ((s  - g_tipPos[i])*g_stiffness);
-    //
-            g_tipPos[i] = g_tipPos[i] + (g_tipVelocity[i]*g_timeStep);
-
-            Cvec3 first = ((g_tipPos[i] - p) / norm(g_tipPos[i] - p))*g_furHeight;
-            g_tipPos[i] = p + first;
-
-            g_tipVelocity[i] = (g_tipVelocity[i] + (total_force*g_timeStep)) * g_damping;
-        }
-    }
-    
-    obj = getPathAccumRbt(g_world, g_headNode);
+//    RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
+//
+//    for (int j = 0; j < g_numStepsPerFrame; j++) {
+//        for (int i = 0; i < g_tipPos.size(); i++) {
+//            // 3i, 3i + 1, 3i + 2
+//            Mesh::Vertex v = g_bunnyMesh.getFace(floor(i / 3)).getVertex(i % 3);
+//            Cvec2 texCoords;
+//
+//            // take p in world coords
+//            Cvec3 p = v.getPosition();
+//            Cvec3 nor = v.getNormal();
+//
+//            Cvec3 s = p + (nor * g_furHeight);
+//
+//            s = (obj * RigTForm(s)).getTranslation();
+//            p = (obj * RigTForm(p)).getTranslation();
+//
+//            Cvec3 total_force = g_gravity + ((s  - g_tipPos[i])*g_stiffness);
+//    //
+//            g_tipPos[i] = g_tipPos[i] + (g_tipVelocity[i]*g_timeStep);
+//
+//            Cvec3 first = ((g_tipPos[i] - p) / norm(g_tipPos[i] - p))*g_furHeight;
+//            g_tipPos[i] = p + first;
+//
+//            g_tipVelocity[i] = (g_tipVelocity[i] + (total_force*g_timeStep)) * g_damping;
+//        }
+//    }
+//
+    RigTForm obj = getPathAccumRbt(g_world, g_headNode);
 
     
     for (int j = 0; j < g_numStepsPerFrame; j++) {
@@ -1341,37 +1341,66 @@ static void initBunnyMeshes() {
     
 }
 
+static void initNormals(Mesh &m) {
+    for (int i = 0; i < m.getNumVertices(); ++i) {
+        m.getVertex(i).setNormal(Cvec3(0));
+    }
+    for (int i = 0; i < m.getNumFaces(); ++i) {
+        const Mesh::Face f = m.getFace(i);
+        const Cvec3 n = f.getNormal();
+        for (int j = 0; j < f.getNumVertices(); ++j) {
+            f.getVertex(j).setNormal(f.getVertex(j).getNormal() + n);
+        }
+    }
+    for (int i = 0; i < m.getNumVertices(); ++i) {
+        Cvec3 n = m.getVertex(i).getNormal();
+        if (norm2(n) > CS175_EPS2)
+            m.getVertex(i).setNormal(normalize(n));
+    }
+}
+
 // New function that loads the bunny mesh and initializes the bunny shell meshes
 static void initHeadMeshes() {
-    g_headMesh.load("cube.mesh");
+    g_headMesh.load("tyrion_head.mesh");
+    g_headNoHairMesh.load("tyrion.mesh");
+    
 
+    //g_headMesh.subdivide();
     // TODO: Init the per vertex normal of g_bunnyMesh; see "calculating
     // normals" section of spec
     // ...
-
+ 
+    cerr << "NUM OF VERTICES: " << g_headMesh.getNumVertices() << "\n";
+    cerr << "NUM OF Faces: " << g_headMesh.getNumFaces() << "\n";
     
-    for (int i = 0; i < g_headMesh.getNumVertices(); ++i) {
-      const Mesh::Vertex v = g_headMesh.getVertex(i);
-        
-      Cvec3 avg_normal;
-      int counter = 0;
-
-      Mesh::VertexIterator it(v.getIterator()), it0(it);
-      do
-      {
-          avg_normal += (it.getFace().getNormal());      // can use here it.getVertex(), it.getFace()
-          counter++;
-      }
-      while (++it != it0); // go around once the 1ring
-        
-      avg_normal /= counter;
-        
-      v.setNormal(avg_normal);
-    }
+    initNormals(g_headMesh);
+    initNormals(g_headNoHairMesh);
+    
+//    for (int i = 0; i < g_headMesh.getNumVertices(); ++i) {
+//      const Mesh::Vertex v = g_headMesh.getVertex(i);
+//
+//      Cvec3 avg_normal;
+//      int counter = 0;
+//
+//      Mesh::VertexIterator it(v.getIterator()), it0(it);
+//      do
+//      {
+//          cerr << counter << "\n";
+//          avg_normal += (it.getFace().getNormal());      // can use here it.getVertex(), it.getFace()
+//          counter++;
+//      }
+//      while (++it != it0); // go around once the 1ring
+//
+//      avg_normal /= counter;
+//
+//      v.setNormal(avg_normal);
+//    }
 
     // TODO: Initialize g_bunnyGeometry from g_bunnyMesh; see "mesh preparation"
     // section of spec
     // ...
+    
+    cerr << "DOES THIS HAPPEN? " << "\n";
     
     vector<VertexPN> vec;
     vec.reserve(g_headMesh.getNumFaces() * 4);
@@ -1388,6 +1417,23 @@ static void initHeadMeshes() {
     
     VertexPN* vertices = &vec[0];
     g_headGeometry->upload(vertices, g_headMesh.getNumFaces() * 4);
+    
+    vector<VertexPN> vec2;
+    vec2.reserve(g_headNoHairMesh.getNumFaces() * 4);
+    
+    for (int i = 0; i < g_headNoHairMesh.getNumFaces(); i++) {
+        for (int j = 0; j < g_headNoHairMesh.getFace(i).getNumVertices(); j++) {
+            Mesh::Vertex v = g_headNoHairMesh.getFace(i).getVertex(j);
+            VertexPN vertex = VertexPN(v.getPosition(), v.getNormal());
+            // Make VertexPN
+            vec2.push_back(vertex);
+        }
+    }
+    g_headNoHairGeometry.reset(new SimpleGeometryPN);
+    
+    VertexPN* vertices2 = &vec2[0];
+    g_headNoHairGeometry->upload(vertices2, g_headNoHairMesh.getNumFaces() * 4);
+
 
 
 
@@ -1507,7 +1553,8 @@ static void initScene() {
     // add bunny as a shape nodes
     g_headNode->addChild(
         shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat)));
-
+    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat)));
+  
     // add each shell as shape node
     for (int i = 0; i < g_numShells; ++i) {
         g_headNode->addChild(shared_ptr<MyShapeNode>(
