@@ -18,6 +18,7 @@ class Mesh {
         Cvec<int, 4> vertex_; // this will be either a tri or a quad
                               // (face_t::vertex[3] == -1  => this is a tri)
         Cvec<int, 4> edge_;
+//        double fur_height;    // fur height
     };
     struct vertex_t {
         Cvec3 position_;
@@ -271,6 +272,7 @@ class Mesh {
     struct Face {
         Mesh &m_;
         const int f_;
+//        double hair_height;    // fur height
 
         Face(Mesh &m, const int f) : m_(m), f_(f) {}
         int getNumVertices() const { return m_.fn__(f_); }
@@ -285,6 +287,13 @@ class Mesh {
             assert(i >= 0 && i < getNumVertices());
             return Vertex(m_, m_.face_[f_].vertex_[i]);
         }
+//        double getHairHeight() {
+//            return hair_height;
+//        }
+//
+//        void setHairHeight(double h) {
+//            hair_height = h;
+//        }
     };
 
     // Mesh::Edge class
