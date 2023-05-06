@@ -461,7 +461,7 @@ static void updateShellGeometry() {
     
     RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
     
-    for (int k = 0; k < g_numShells; k++) {
+    for (int k = 0; k < g_numShells; k++) { 
         
         obj = getPathAccumRbt(g_world, g_headNode);
 
