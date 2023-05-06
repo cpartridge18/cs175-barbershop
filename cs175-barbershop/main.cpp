@@ -31,6 +31,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <math.h>
 
 #define GLEW_STATIC
 #include "GL/glew.h"
@@ -51,6 +52,7 @@
 #include "drawer.h"
 #include "picker.h"
 #include "mesh.h"
+
 
 //#include <filesystem>
 //namespace fs = std::filesystem;
@@ -101,7 +103,7 @@ static vector<shared_ptr<Material>> g_bunnyShellMats; // for bunny shells
 
 // New Geometry
 static const int g_numShells = 24; // constants defining how many layers of shells
-static double g_furHeight = 0.21;
+static double g_furHeight = 0.5;
 static double g_hairyness = 0.7;
 static bool g_shellNeedsUpdate = false;
 
@@ -128,6 +130,8 @@ static std::vector<Cvec3>
     g_tipPos,      // should be hair tip pos in world-space coordinates
     g_tipVelocity, g_headTipPos, g_headTipVelocity; // should be hair tip velocity in world-space coordinates
 
+vector<double> g_hairLengths;
+
 // --------- Materials
 static shared_ptr<Material> g_redDiffuseMat, g_blueDiffuseMat, g_bumpFloorMat,
     g_arcballMat, g_pickingMat, g_lightMat, g_shaverMat;
@@ -138,13 +142,13 @@ shared_ptr<Material> g_overridingMaterial;
 typedef SgGeometryShapeNode MyShapeNode;
 
 // Vertex buffer and index buffer associated with the ground and cube geometry
-static shared_ptr<Geometry> g_ground, g_cube, g_sphere;
+static shared_ptr<Geometry> g_ground, g_cube, g_sphere, g_mirror;
 
 // --------- Scene
 
 static shared_ptr<SgRootNode> g_world;
 static shared_ptr<SgRbtNode> g_skyNode, g_groundNode, g_robot1Node,
-    g_robot2Node, g_light1, g_light2, g_shaverNode, g_headNode;
+    g_robot2Node, g_light1, g_light2, g_shaverNode, g_headNode, g_mirrorNode;
 
 static shared_ptr<SgRbtNode> g_currentCameraNode;
 static shared_ptr<SgRbtNode> g_currentPickedRbtNode;
@@ -298,28 +302,33 @@ static void initSimulation() {
     
     RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
     
-    for (int i = 0; i < g_bunnyMesh.getNumFaces(); i++) {
-        for (int j = 0; j < g_bunnyMesh.getFace(i).getNumVertices(); j++) {
-            Mesh::Vertex v = g_bunnyMesh.getFace(i).getVertex(j);
-            
-            Cvec3 p = v.getPosition();
-            Cvec3 norm = v.getNormal();
-            Cvec3 t = p + (norm*g_furHeight);
-            
-            g_tipPos.push_back((obj * RigTForm(t)).getTranslation());
-            g_tipVelocity.push_back(Cvec3(0, 0, 0));
-        }
-    }
+//    for (int i = 0; i < g_bunnyMesh.getNumFaces(); i++) {
+//        for (int j = 0; j < g_bunnyMesh.getFace(i).getNumVertices(); j++) {
+//            Mesh::Vertex v = g_bunnyMesh.getFace(i).getVertex(j);
+//
+//            Cvec3 p = v.getPosition();
+//            Cvec3 norm = v.getNormal();
+////            Cvec3 t = p + (norm*g_furHeight);
+////            Cvec3 t = p + (norm*g_hairLengths[i]);
+//            Cvec3 t = p + (norm * g_hairLengths[i]);
+//
+//            g_tipPos.push_back((obj * RigTForm(t)).getTranslation());
+//            g_tipVelocity.push_back(Cvec3(0, 0, 0));
+//        }
+//    }
     
     obj = getPathAccumRbt(g_world, g_headNode);
     
     for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
         for (int j = 0; j < g_headMesh.getFace(i).getNumVertices(); j++) {
             Mesh::Vertex v = g_headMesh.getFace(i).getVertex(j);
+            g_hairLengths.push_back(g_furHeight);
             
             Cvec3 p = v.getPosition();
             Cvec3 norm = v.getNormal();
-            Cvec3 t = p + (norm*g_furHeight);
+//            Cvec3 t = p + (norm*g_furHeight);
+            Cvec3 t = p + (norm*g_hairLengths[i]);
+//            Cvec3 t = p + (norm * g_headMesh.getFace(i).getHairHeight());
             
             g_headTipPos.push_back((obj * RigTForm(t)).getTranslation());
             g_headTipVelocity.push_back(Cvec3(0, 0, 0));
@@ -339,6 +348,22 @@ static void initGround() {
     makePlane(g_groundSize * 2, vtx.begin(), idx.begin());
     g_ground.reset(
         new SimpleIndexedGeometryPNTBX(&vtx[0], &idx[0], vbLen, ibLen));
+    
+    // MAKE MIRROR
+}
+
+static void initMirror() {
+    int ibLen, vbLen;
+    getPlaneVbIbLen(vbLen, ibLen);
+
+    // Temporary storage for cube Geometry
+    vector<VertexPNTBX> vtx(vbLen);
+    vector<unsigned short> idx(ibLen);
+
+    makePlane(g_groundSize, vtx.begin(), idx.begin());
+    g_mirror.reset(
+        new SimpleIndexedGeometryPNTBX(&vtx[0], &idx[0], vbLen, ibLen));
+    // MAKE MIRROR
 }
 
 static void initCubes() {
@@ -461,7 +486,7 @@ static void updateShellGeometry() {
     
     RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
     
-    for (int k = 0; k < g_numShells; k++) { 
+    for (int k = 0; k < g_numShells; k++) {
         
         obj = getPathAccumRbt(g_world, g_headNode);
 
@@ -478,6 +503,7 @@ static void updateShellGeometry() {
                 Cvec3 norm = v.getNormal();
                 Cvec3 t = g_headTipPos[(i*3)+j];
                 Cvec3 s = p + (norm*g_furHeight);
+//                Cvec3 s = p + (norm* g_headMesh.getFace(i).getHairHeight());
           
                 // translate t into object coordinates
                 Cvec3 newt = (inv(obj) * RigTForm(t)).getTranslation();
@@ -573,8 +599,8 @@ static void drawStuff(bool picking) {
 // New function to update the simulation every frame
 static void hairsSimulationUpdate() {
     // TASK 2 TODO: write dynamics simulation code here
-    
     // bunny coordinates
+
 //    RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
 //
 //    for (int j = 0; j < g_numStepsPerFrame; j++) {
@@ -616,7 +642,9 @@ static void hairsSimulationUpdate() {
             Cvec3 p = v.getPosition();
             Cvec3 nor = v.getNormal();
 
-            Cvec3 s = p + (nor * g_furHeight);
+            Cvec3 s = p + (nor * g_hairLengths[floor(i / 3)]);
+            
+//            Cvec3 s = p + (nor * g_headMesh.getFace(floor(i / 3)).getHairHeight());
             
             s = (obj * RigTForm(s)).getTranslation();
             p = (obj * RigTForm(p)).getTranslation();
@@ -625,7 +653,7 @@ static void hairsSimulationUpdate() {
     //
             g_headTipPos[i] = g_headTipPos[i] + (g_headTipVelocity[i]*g_timeStep);
 
-            Cvec3 first = ((g_headTipPos[i] - p) / norm(g_headTipPos[i] - p))*g_furHeight;
+            Cvec3 first = ((g_headTipPos[i] - p) / norm(g_headTipPos[i] - p))* g_hairLengths[floor(i / 3)];
             g_headTipPos[i] = p + first;
 
             g_headTipVelocity[i] = (g_headTipVelocity[i] + (total_force*g_timeStep)) * g_damping;
@@ -634,6 +662,80 @@ static void hairsSimulationUpdate() {
     
     g_shellNeedsUpdate = true;
         
+}
+
+static void checkCutLength() {
+    // find the distance b/e center of face and clipper object
+    
+    
+    // shaver in world coords
+    RigTForm shavObj = getPathAccumRbt(g_world, g_shaverNode);
+    RigTForm headObj = getPathAccumRbt(g_world, g_headNode);
+    
+    
+//    cout << "cliper xpos" << shavObj.getTranslation()[0] << endl;
+//    cout << "cliper ypos" << shavObj.getTranslation()[1] << endl;
+//    cout << "cliper zpos" << shavObj.getTranslation()[2] << endl;
+    
+    cout << g_headMesh.getFace(3251).getVertex(1).getPosition()[0] << endl;
+    cout << (shavObj * RigTForm(g_headMesh.getFace(3251).getVertex(1).getPosition())).getTranslation()[0] << endl;
+    
+    
+    
+    for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
+
+        double cntr_x = 0;
+        double cntr_y = 0;
+        double cntr_z = 0;
+        for (int j = 0; j < g_headMesh.getFace(i).getNumVertices(); j++) {
+
+            // convert center of face to world cordinates
+            Cvec3 p = (headObj * RigTForm(g_headMesh.getFace(i).getVertex(j).getPosition())).getTranslation();
+            cntr_x += p[0];
+            cntr_y += p[1];
+            cntr_z += p[2];
+
+        }
+        Cvec3 centroid = Cvec3((cntr_x / 3), (cntr_y / 3), (cntr_z / 3));
+    
+        
+        float dist = sqrt(pow((centroid[0] - shavObj.getTranslation()[0]), 2) + pow((centroid[1] - shavObj.getTranslation()[1]), 2) + pow((centroid[2] - shavObj.getTranslation()[2]), 2));
+        
+        
+        // crazy projection math, ignore for now
+                        //        // if distance between centroid and shaver is < fur_height, alter fur height
+                        //        // make fur height a face property
+                        //
+                        //        Cvec3 norm = g_headMesh.getFace(i).getNormal();
+                        //        Cvec3 facePt = g_headMesh.getFace(i).getVertex(0).getPosition(); // simply get a vertex on the plane / face
+                        //
+                        ////        Cvec3 norm = (shavObj * RigTForm (g_headMesh.getFace(i).getNormal())).getTranslation();
+                        ////        Cvec3 facePt = (shavObj * RigTForm (g_headMesh.getFace(i).getVertex(0).getPosition())).getTranslation(); // simply get a vertex on the plane / face
+                        //
+                        //        // displacement vector between clipper and facePt
+                        //        double t = ((norm[0] * (fabs(facePt[0] - shavObj.getTranslation()[0])) + norm[1] * fabs(facePt[1] - shavObj.getTranslation()[1]) + norm[2]* fabs(facePt[2] - shavObj.getTranslation()[2]))/ (pow(norm[0], 2) + pow(norm[1], 2) + pow(norm[2], 2)));
+                        //
+                        //
+                        //        // clipper center projected onto plane
+                        //        Cvec3 projV = Cvec3((shavObj.getTranslation()[0] + t * norm[0]), (shavObj.getTranslation()[1] + t * norm[1]), (shavObj.getTranslation()[2] + t * norm[2]));
+                        //
+                        //        // translate to world coordinates
+                        //        projV = (shavObj * RigTForm (projV)).getTranslation();
+                        //
+                        //        float dist = sqrt(pow((projV[0] - shavObj.getTranslation()[0]), 2) + pow((projV[1] - shavObj.getTranslation()[1]), 2) + pow((projV[1] - shavObj.getTranslation()[2]), 2));
+               
+//        cout << "distance b/e clip ctr, face ctr" << dist << endl;
+        
+        if (dist < g_hairLengths[i]) {
+//            cout << "distance b/e clip ctr, face ctr" << dist << endl;
+//            cout << "cliper xpos" << shavObj.getTranslation()[0] << endl;
+//            cout << "cliper ypos" << shavObj.getTranslation()[1] << endl;
+//            cout << "cliper zpos" << shavObj.getTranslation()[2] << endl;
+            g_hairLengths[i] = dist;
+//            g_headMesh.getFace(i).setHairHeight(0);
+        }
+    }
+    
 }
 
 static void display() {
@@ -1360,7 +1462,6 @@ static void initHeadMeshes() {
     initGeo(g_chairMesh, g_chairGeometry);
     
     cerr << "DOES THIS HAPPEN? " << "\n";
- 
 
 
     // Now allocate array of SimpleGeometryPNX to for shells, one per layer
@@ -1376,6 +1477,7 @@ static void initHeadMeshes() {
 
 static void initGeometry() {
     initGround();
+    initMirror();
     initCubes();
     initSphere();
     initRobots();
@@ -1469,6 +1571,10 @@ static void initScene() {
     g_groundNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY, 0))));
     g_groundNode->addChild(
         shared_ptr<MyShapeNode>(new MyShapeNode(g_ground, g_bumpFloorMat)));
+    
+    g_mirrorNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY + 5, -10))));
+    g_mirrorNode->addChild(
+        shared_ptr<MyShapeNode>(new MyShapeNode(g_mirror, g_bumpFloorMat, Cvec3(0), Cvec3(-90, 180, 180), Cvec3(1))));
 
     //g_robot1Node.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
     //g_robot2Node.reset(new SgRbtNode(RigTForm(Cvec3(2, 1, 0))));
@@ -1478,21 +1584,21 @@ static void initScene() {
     g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4, -2))));
     // add bunny as a shape nodes
     g_headNode->addChild(
-        shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat, Cvec3(0, 0, 0), Cvec3(0, 180, 0), Cvec3(1))));
+        shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat, Cvec3(0, 0, 0), Cvec3(0, 180, 0), Cvec3(.5))));
   
     // add each shell as shape node
     for (int i = 0; i < g_numShells; ++i) {
         g_headNode->addChild(shared_ptr<MyShapeNode>(
-            new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i], Cvec3(0), Cvec3(0, 180, 0), Cvec3(1))));
+            new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i], Cvec3(0), Cvec3(0, 180, 0), Cvec3(.5))));
     }
-    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat, Cvec3(0, -0.5, -0.3), Cvec3(0, 180, 0), Cvec3(1))));
+    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat, Cvec3(0, -0.5, -0.3), Cvec3(0, 180, 0), Cvec3(.5))));
     
     
     g_chairNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
     g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 2, 0.6), Cvec3(0, 180, 0), Cvec3(2))));
      
-    g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-6, 1, 0))));
-    g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_trimmerGeometry, g_bunnyMat, Cvec3(0), Cvec3(0), Cvec3(1, 1.5, 0.25))));
+    g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-1, 5, 0))));
+    g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_cube, g_shaverMat, Cvec3(0), Cvec3(0), Cvec3(.1, .1, .1))));
 
     g_light1.reset(new SgRbtNode(RigTForm(Cvec3(4.0, 3.0, 5.0))));
     g_light2.reset(new SgRbtNode(RigTForm(Cvec3(-4, 1.0, -4.0))));
@@ -1534,6 +1640,7 @@ static void initScene() {
     g_world->addChild(g_bunnyNode);
     g_world->addChild(g_shaverNode);
     g_world->addChild(g_chairNode);
+    g_world->addChild(g_mirrorNode);
     
     g_currentCameraNode = g_skyNode;
 }
@@ -1553,7 +1660,9 @@ static void glfwLoop() {
             animationUpdate();
             g_lastFrameClock = glfwGetTime();
 
+            checkCutLength();
             hairsSimulationUpdate();
+            
 
             display();
             g_lastFrameClock = thisTime;
@@ -1583,6 +1692,7 @@ int main(int argc, char *argv[]) {
         initAnimation();
         initSimulation();
         updateShellGeometry();
+//        checkCutLength();
 
         glfwLoop();
         return 0;
