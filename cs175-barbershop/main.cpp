@@ -1629,6 +1629,8 @@ static void initScene() {
         shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat, Cvec3(0, 0, 0), Cvec3(0, 0, 0), Cvec3(1))));
   
     // add each shell as shape node
+    
+    // helllooooo
     for (int i = 0; i < g_numShells; ++i) {
         g_headNode->addChild(shared_ptr<MyShapeNode>(
             new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i], Cvec3(0), Cvec3(0, 0, 0), Cvec3(1))));
