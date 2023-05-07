@@ -818,6 +818,8 @@ bool interpolateAndDisplay(float t) {
     return false;
 }
 
+
+// chrisp branch test 
 static void animationUpdate() {
     if (g_playingAnimation) {
         bool endReached = interpolateAndDisplay((float) g_animateTime / g_msBetweenKeyFrames);
