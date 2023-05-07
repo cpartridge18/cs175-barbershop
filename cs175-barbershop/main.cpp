@@ -125,6 +125,8 @@ static double g_damping = 0.96;
 static double g_stiffness = 4;
 static int g_simulationsPerSecond = 60;
 
+bool g_preRender = true;
+
 static std::vector<Cvec3>
     g_ogTipPos,
     g_tipPos,      // should be hair tip pos in world-space coordinates
@@ -134,7 +136,7 @@ vector<double> g_hairLengths;
 
 // --------- Materials
 static shared_ptr<Material> g_redDiffuseMat, g_blueDiffuseMat, g_bumpFloorMat,
-    g_arcballMat, g_pickingMat, g_lightMat, g_shaverMat;
+    g_arcballMat, g_pickingMat, g_lightMat, g_shaverMat, g_mirrorMat;
 
 shared_ptr<Material> g_overridingMaterial;
 
@@ -547,7 +549,7 @@ static void updateShellGeometry() {
 }
 
 
-static void drawStuff(bool picking) {
+static void drawStuff(bool picking, bool mirror=false) {
     // if we are not translating, update arcball scale
     if (!(g_mouseMClickButton || (g_mouseLClickButton && g_mouseRClickButton) ||
           (g_mouseLClickButton && !g_mouseRClickButton && g_spaceDown)))
@@ -558,6 +560,12 @@ static void drawStuff(bool picking) {
     // build & send proj. matrix to vshader
     const Matrix4 projmat = makeProjectionMatrix();
     sendProjectionMatrix(uniforms, projmat);
+    
+    if (mirror) {
+        g_currentCameraNode = g_mirrorNode;
+    } else {
+        g_currentCameraNode = g_skyNode;
+    }
 
     const RigTForm eyeRbt = getPathAccumRbt(g_world, g_currentCameraNode);
     const RigTForm invEyeRbt = inv(eyeRbt);
@@ -601,34 +609,6 @@ static void hairsSimulationUpdate() {
     // TASK 2 TODO: write dynamics simulation code here
     // bunny coordinates
 
-//    RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
-//
-//    for (int j = 0; j < g_numStepsPerFrame; j++) {
-//        for (int i = 0; i < g_tipPos.size(); i++) {
-//            // 3i, 3i + 1, 3i + 2
-//            Mesh::Vertex v = g_bunnyMesh.getFace(floor(i / 3)).getVertex(i % 3);
-//            Cvec2 texCoords;
-//
-//            // take p in world coords
-//            Cvec3 p = v.getPosition();
-//            Cvec3 nor = v.getNormal();
-//
-//            Cvec3 s = p + (nor * g_furHeight);
-//
-//            s = (obj * RigTForm(s)).getTranslation();
-//            p = (obj * RigTForm(p)).getTranslation();
-//
-//            Cvec3 total_force = g_gravity + ((s  - g_tipPos[i])*g_stiffness);
-//    //
-//            g_tipPos[i] = g_tipPos[i] + (g_tipVelocity[i]*g_timeStep);
-//
-//            Cvec3 first = ((g_tipPos[i] - p) / norm(g_tipPos[i] - p))*g_furHeight;
-//            g_tipPos[i] = p + first;
-//
-//            g_tipVelocity[i] = (g_tipVelocity[i] + (total_force*g_timeStep)) * g_damping;
-//        }
-//    }
-//
     RigTForm obj = getPathAccumRbt(g_world, g_headNode);
 
     
@@ -736,6 +716,68 @@ static void checkCutLength() {
         }
     }
     
+}
+
+static void preRender() {
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
+    GLuint mirrorFBO = 0;
+    glGenFramebuffers(1, &mirrorFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, mirrorFBO);
+    
+    // The texture we're going to render to
+    GLuint renderedTexture;
+    glGenTextures(1, &renderedTexture);
+
+    // "Bind" the newly created texture : all future texture functions will modify this texture
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+    // Give an empty image to OpenGL ( the last "0" )
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, g_windowWidth, g_windowHeight, 0,GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+    // Poor filtering. Needed !
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    
+    // The depth buffer
+    GLuint depthrenderbuffer;
+    glGenRenderbuffers(1, &depthrenderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, g_windowWidth, g_windowHeight);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+    
+    // Set "renderedTexture" as our colour attachement #0
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0);
+
+    // Set the list of draw buffers.
+    GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
+    
+    // Always check that our framebuffer is ok
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        throw runtime_error(string("Cannot load frame buffer correctly "));
+    }
+    
+    // Render to our framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, mirrorFBO);
+    glViewport(0,0,g_windowWidth,g_windowHeight);
+
+    // actually draw the things onto the frame buffer
+    drawStuff(false, true);
+
+    //glfwSwapBuffers(g_window);
+    // set texture to be equal to buffer
+
+    checkGlErrors();
+    
+    g_preRender = false;
+//
+//    // normal mapping but to the mirror and just using this for texture
+//    g_mirrorMat.reset(new Material("./shaders/mirror-gl3.vshader",
+//                                      "./shaders/mirror-gl3.fshader"));
+//    g_mirrorMat->getUniforms().put("uTexColor",GLuint (renderedTexture));
 }
 
 static void display() {
@@ -1272,6 +1314,7 @@ static void initMaterials() {
         "uTexNormal", shared_ptr<ImageTexture>(
                           new ImageTexture("FieldstoneNormal.ppm", false)));
 
+
     // copy solid prototype, and set to wireframed rendering
     g_arcballMat.reset(new Material(solid));
     g_arcballMat->getUniforms().put("uColor", Cvec3f(0.27f, 0.82f, 0.35f));
@@ -1460,9 +1503,6 @@ static void initHeadMeshes() {
     initGeo(g_headNoHairMesh, g_headNoHairGeometry);
     initGeo(g_trimmerMesh, g_trimmerGeometry);
     initGeo(g_chairMesh, g_chairGeometry);
-    
-    cerr << "DOES THIS HAPPEN? " << "\n";
-
 
     // Now allocate array of SimpleGeometryPNX to for shells, one per layer
     g_headShellGeometries.resize(g_numShells);
@@ -1572,30 +1612,32 @@ static void initScene() {
     g_groundNode->addChild(
         shared_ptr<MyShapeNode>(new MyShapeNode(g_ground, g_bumpFloorMat)));
     
-    g_mirrorNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY + 5, -10))));
-    g_mirrorNode->addChild(
-        shared_ptr<MyShapeNode>(new MyShapeNode(g_mirror, g_bumpFloorMat, Cvec3(0), Cvec3(-90, 180, 180), Cvec3(1))));
+//    if (!g_preRender) {
+//        g_mirrorNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY + 5, 10))));
+//        g_mirrorNode->addChild(
+//            shared_ptr<MyShapeNode>(new MyShapeNode(g_mirror, g_mirrorMat, Cvec3(0), Cvec3(90, 180, 180), Cvec3(1))));
+//    }
 
     //g_robot1Node.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
     //g_robot2Node.reset(new SgRbtNode(RigTForm(Cvec3(2, 1, 0))));
 
     //constructRobot(g_robot1Node, g_redDiffuseMat);  // a Red robot
     //constructRobot(g_robot2Node, g_blueDiffuseMat); // a Blue robot
-    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4, -2))));
+    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4, 0))));
     // add bunny as a shape nodes
     g_headNode->addChild(
-        shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat, Cvec3(0, 0, 0), Cvec3(0, 180, 0), Cvec3(.5))));
+        shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat, Cvec3(0, 0, 0), Cvec3(0, 0, 0), Cvec3(1))));
   
     // add each shell as shape node
     for (int i = 0; i < g_numShells; ++i) {
         g_headNode->addChild(shared_ptr<MyShapeNode>(
-            new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i], Cvec3(0), Cvec3(0, 180, 0), Cvec3(.5))));
+            new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i], Cvec3(0), Cvec3(0, 0, 0), Cvec3(1))));
     }
-    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat, Cvec3(0, -0.5, -0.3), Cvec3(0, 180, 0), Cvec3(.5))));
+    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat, Cvec3(0, -0.6, 0.3), Cvec3(0, 0, 0), Cvec3(1))));
     
     
     g_chairNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
-    g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 2, 0.6), Cvec3(0, 180, 0), Cvec3(2))));
+    g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 2, 0.6), Cvec3(0, 0, 0), Cvec3(2))));
      
     g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-1, 5, 0))));
     g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_cube, g_shaverMat, Cvec3(0), Cvec3(0), Cvec3(.1, .1, .1))));
@@ -1640,7 +1682,10 @@ static void initScene() {
     g_world->addChild(g_bunnyNode);
     g_world->addChild(g_shaverNode);
     g_world->addChild(g_chairNode);
-    g_world->addChild(g_mirrorNode);
+    
+    if (!g_preRender) {
+        g_world->addChild(g_mirrorNode);
+    }
     
     g_currentCameraNode = g_skyNode;
 }
@@ -1663,6 +1708,7 @@ static void glfwLoop() {
             checkCutLength();
             hairsSimulationUpdate();
             
+            //preRender();
 
             display();
             g_lastFrameClock = thisTime;
