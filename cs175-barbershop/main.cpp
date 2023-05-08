@@ -153,7 +153,7 @@ static shared_ptr<Geometry> g_ground, g_cube, g_sphere, g_mirror;
 
 static shared_ptr<SgRootNode> g_world;
 static shared_ptr<SgRbtNode> g_skyNode, g_groundNode, g_robot1Node,
-    g_robot2Node, g_light1, g_light2, g_shaverNode, g_headNode, g_mirrorNode;
+    g_robot2Node, g_light1, g_light2, g_shaverNode, g_headNode, g_mirrorNode, g_cutNode;
 
 static shared_ptr<SgRbtNode> g_currentCameraNode;
 static shared_ptr<SgRbtNode> g_currentPickedRbtNode;
@@ -650,11 +650,21 @@ static void hairsSimulationUpdate() {
 static void checkCutLength() {
     // find the distance b/e center of face and clipper object
     
-    double maxHairLen = 0;
-    // shaver in world coords
-    RigTForm shavObj = getPathAccumRbt(g_world, g_shaverNode);
-    RigTForm headObj = getPathAccumRbt(g_world, g_headNode);
+
     
+    cerr << "G_CUT NODE: " << g_cutNode->getRbt().getTranslation()[0] << g_cutNode->getRbt().getTranslation()[1] << g_cutNode->getRbt().getTranslation()[2] << "\n";
+    
+    // adjusted shaverNode, probably only need to do this once but whatever
+//    RigTForm shavRbt = g_shaverNode->getRbt();
+//    shared_ptr<SgRbtNode> newShavNode;
+//    newShavNode.reset(new SgRbtNode(RigTForm(shavRbt.getTranslation() + Cvec3(0, 0.5, 0), shavRbt.getRotation())));
+
+    double maxHairLen = 0;
+
+    // shaver in world coords
+    RigTForm shavObj = getPathAccumRbt(g_world, g_cutNode);
+//    shavObj = RigTForm(shavObj.getTranslation() + Cvec3(0, 0, 0), shavObj.getRotation());
+    RigTForm headObj = getPathAccumRbt(g_world, g_headNode);
     
     for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
 
@@ -977,6 +987,9 @@ static void motion(GLFWwindow *window, double x, double y) {
         target->setRbt(O);
     } else {
         target->setRbt(doMtoOwrtA(M, target->getRbt(), A));
+//        if (target == g_shaverNode) {
+//            g_cutNode->setRbt(doMtoOwrtA(M, target->getRbt(), A));
+//        }
     }
 
     g_mouseClickX += dx;
@@ -1408,6 +1421,12 @@ static void initMaterials() {
     g_bunnyMat->getUniforms().put("uColorAmbient", Cvec3f(0.45f, 0.3f, 0.3f))
                              .put("uColorDiffuse", Cvec3f(0.2f, 0.2f, 0.2f));
     
+    // bunny material
+    g_shaverMat.reset(new Material("./shaders/basic-gl3.vshader",
+                                  "./shaders/bunny-gl3.fshader"));
+    g_shaverMat->getUniforms().put("uColorAmbient", Cvec3f(0.2f, 0.2f, 0.2f))
+                             .put("uColorDiffuse", Cvec3f(0.2f, 0.2f, 0.2f));
+    
     // copy solid prototype, and set to color white
     g_chairMat.reset(new Material(diffuse));
     g_chairMat->getUniforms().put("uColor", Cvec3f(0.2, 0.2, 0.2));
@@ -1442,6 +1461,7 @@ static void initMaterials() {
         g_bunnyShellMats[i]->getUniforms().put(
             "uAlphaExponent", 2.f + 5.f * float(i + 1) / g_numShells);
     }
+    
 };
 
 // New function that loads the bunny mesh and initializes the bunny shell meshes
@@ -1545,7 +1565,7 @@ static void initGeo(Mesh &m, shared_ptr<SimpleGeometryPN> &g) {
 static void initHeadMeshes() {
     g_headMesh.load("tyrionhead.mesh");
     g_headNoHairMesh.load("tyrion_nohair.mesh");
-    g_trimmerMesh.load("trimmer.mesh");
+    g_trimmerMesh.load("trimmer2.mesh");
     g_chairMesh.load("chair.mesh");
     
  
@@ -1673,7 +1693,7 @@ static void constructRobot(shared_ptr<SgTransformNode> base,
 static void initScene() {
     g_world.reset(new SgRootNode());
 
-//    g_skyNode.reset(new SgRbtNode(RigTForm(Cvec3(0.0, 0.25, 4.0))));
+
     g_skyNode.reset(new SgRbtNode(RigTForm(Cvec3(0.0, 3.5, 7.0))));
 
     g_groundNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY, 0))));
@@ -1710,10 +1730,14 @@ static void initScene() {
     g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 2, 0.6), Cvec3(0, 0, 0), Cvec3(2))));
      
     g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-1, 5, 0))));
-    g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_cube, g_shaverMat, Cvec3(0), Cvec3(0), Cvec3(.1, .1, .1))));
 
-    g_light1.reset(new SgRbtNode(RigTForm(Cvec3(4.0, 10.0, 5.0))));
-    g_light2.reset(new SgRbtNode(RigTForm(Cvec3(-4.0, 10.0, -4.0))));
+    g_cutNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0.48))));
+    g_cutNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_cube, g_bunnyMat, Cvec3(0), Cvec3(0), Cvec3(.01, .01, .01))));
+    g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_trimmerGeometry, g_shaverMat, Cvec3(0), Cvec3(0), Cvec3(.5, .5, .5))));
+    g_shaverNode->addChild(g_cutNode);
+    g_light1.reset(new SgRbtNode(RigTForm(Cvec3(4.0, 3.0, 5.0))));
+    g_light2.reset(new SgRbtNode(RigTForm(Cvec3(-4, 1.0, -4.0))));
+
     g_light1->addChild(shared_ptr<MyShapeNode>(
         new MyShapeNode(g_sphere, g_lightMat, Cvec3(0), Cvec3(0), Cvec3(0.5))));
 
@@ -1753,9 +1777,9 @@ static void initScene() {
     g_world->addChild(g_shaverNode);
     g_world->addChild(g_chairNode);
     
-    if (!g_preRender) {
-        g_world->addChild(g_mirrorNode);
-    }
+//    if (!g_preRender) {
+//        g_world->addChild(g_mirrorNode);
+//    }
     
     g_currentCameraNode = g_skyNode;
 }
