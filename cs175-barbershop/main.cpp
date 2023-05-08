@@ -649,15 +649,6 @@ static void hairsSimulationUpdate() {
 
 static void checkCutLength() {
     // find the distance b/e center of face and clipper object
-    
-
-    
-    cerr << "G_CUT NODE: " << g_cutNode->getRbt().getTranslation()[0] << g_cutNode->getRbt().getTranslation()[1] << g_cutNode->getRbt().getTranslation()[2] << "\n";
-    
-    // adjusted shaverNode, probably only need to do this once but whatever
-//    RigTForm shavRbt = g_shaverNode->getRbt();
-//    shared_ptr<SgRbtNode> newShavNode;
-//    newShavNode.reset(new SgRbtNode(RigTForm(shavRbt.getTranslation() + Cvec3(0, 0.5, 0), shavRbt.getRotation())));
 
     double maxHairLen = 0;
 
@@ -1036,6 +1027,7 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
                  << "Welcome to the barbershop! Your task is to give our client, Tyrion Lannister, the hair cut of his life as he prepares for the battle to defend his countrymen. Use the controls below and the mouse to save the kingdom. \n\n"
                  << "w,a,s,d \t Move the clippers up and down and side to side. \n"
                  << "z,x \t\t Move the clippers in and out. \n"
+                 << "r   \t\t Reset Tyrion's hair to have fun all over again!"
                  << endl;
             break;
 //        case GLFW_KEY_S:
@@ -1050,6 +1042,11 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
                     g_currentCameraNode = viewers[(i + 1) % 3];
                     break;
                 }
+            }
+        } break;
+        case GLFW_KEY_R: {
+            for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
+                g_hairLengths[i] = g_furHeight;
             }
         } break;
         case GLFW_KEY_P:
