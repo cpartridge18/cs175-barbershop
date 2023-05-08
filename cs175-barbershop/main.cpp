@@ -710,6 +710,12 @@ static void checkCutLength() {
 //            g_headMesh.getFace(i).setHairHeight(0);
         }
         
+        if (dist < .1) {
+            cerr << "does this happen?" << "\n";
+            RigTForm cur = g_shaverNode->getRbt();
+            g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headMesh.getFace(i).getNormal()*.01), cur.getRotation()));
+        }
+        
         // after updating hair length, update maximum hair length
         if (maxHairLen < g_hairLengths[i]) {
             maxHairLen = g_hairLengths[i];
@@ -1738,7 +1744,7 @@ static void initScene() {
     g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_trimmerGeometry, g_shaverMat, Cvec3(0), Cvec3(0), Cvec3(.5, .5, .5))));
     g_shaverNode->addChild(g_cutNode);
     g_light1.reset(new SgRbtNode(RigTForm(Cvec3(4.0, 3.0, 5.0))));
-    g_light2.reset(new SgRbtNode(RigTForm(Cvec3(-4, 1.0, -4.0))));
+    g_light2.reset(new SgRbtNode(RigTForm(Cvec3(-6, 10, -4.0))));
 
     g_light1->addChild(shared_ptr<MyShapeNode>(
         new MyShapeNode(g_sphere, g_lightMat, Cvec3(0), Cvec3(0), Cvec3(0.5))));
