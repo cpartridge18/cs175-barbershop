@@ -127,6 +127,8 @@ static int g_simulationsPerSecond = 60;
 
 bool g_preRender = true;
 
+float depthSpd = 0.1;
+
 static std::vector<Cvec3>
     g_ogTipPos,
     g_tipPos,      // should be hair tip pos in world-space coordinates
@@ -655,11 +657,7 @@ static void checkCutLength() {
     
 //    cout << "cliper xpos" << shavObj.getTranslation()[0] << endl;
 //    cout << "cliper ypos" << shavObj.getTranslation()[1] << endl;
-//    cout << "cliper zpos" << shavObj.getTranslation()[2] << endl;
-    
-    cout << g_headMesh.getFace(3251).getVertex(1).getPosition()[0] << endl;
-    cout << (shavObj * RigTForm(g_headMesh.getFace(3251).getVertex(1).getPosition())).getTranslation()[0] << endl;
-    
+
     
     
     for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
@@ -819,7 +817,7 @@ bool interpolateAndDisplay(float t) {
 }
 
 
-// chrisp branch test 
+// chrisp branch test
 static void animationUpdate() {
     if (g_playingAnimation) {
         bool endReached = interpolateAndDisplay((float) g_animateTime / g_msBetweenKeyFrames);
@@ -888,10 +886,13 @@ static RigTForm doMtoOwrtA(const RigTForm &M, const RigTForm &O,
 static RigTForm getMRbt(const double dx, const double dy) {
     RigTForm M;
 
+    
+    
     if (g_mouseLClickButton && !g_mouseRClickButton && !g_spaceDown) {
-        if (shouldUseArcball())
-            M = moveArcball(Cvec2(g_mouseClickX, g_mouseClickY),
-                            Cvec2(g_mouseClickX + dx, g_mouseClickY + dy));
+        if (shouldUseArcball()) {
+                M = moveArcball(Cvec2(g_mouseClickX, g_mouseClickY),
+                                Cvec2(g_mouseClickX + dx, g_mouseClickY + dy));
+            }
         else
             M = RigTForm(Quat::makeXRotation(-dy) * Quat::makeYRotation(dx));
     } else {
@@ -901,7 +902,7 @@ static RigTForm getMRbt(const double dx, const double dy) {
             M = RigTForm(Cvec3(dx, dy, 0) * movementScale);
         } else if (g_mouseMClickButton ||
                    (g_mouseLClickButton && g_mouseRClickButton) ||
-                   (g_mouseLClickButton && g_spaceDown)) {
+                   (g_mouseLClickButton && g_spaceDown && g_currentPickedRbtNode != g_shaverNode)) {
             M = RigTForm(Cvec3(0, 0, -dy) * movementScale);
         }
     }
@@ -1013,6 +1014,7 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
         case GLFW_KEY_H:
             cout << " ============== H E L P ==============\n\n"
                  << "h\t\thelp menu\n"
+                 << "use wasd and zx to move clippers around, in and out"
                  << "s\t\tsave screenshot\n"
                  << "f\t\tToggle flat shading on/off.\n"
                  << "p\t\tUse mouse to pick a part to edit\n"
@@ -1031,10 +1033,10 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
                  << "y\t\tPlay/Stop animation\n"
                  << endl;
             break;
-        case GLFW_KEY_S:
-            glFlush();
-            writePpmScreenshot(g_windowWidth, g_windowHeight, "out.ppm");
-            break;
+//        case GLFW_KEY_S:
+//            glFlush();
+//            writePpmScreenshot(g_windowWidth, g_windowHeight, "out.ppm");
+//            break;
         case GLFW_KEY_V: {
             shared_ptr<SgRbtNode> viewers[] = {g_skyNode, g_robot1Node,
                                                g_robot2Node};
@@ -1056,9 +1058,9 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
                      : "sky-sky frame\n")
                  << endl;
             break;
-        case GLFW_KEY_A:
-            g_displayArcball = !g_displayArcball;
-            break;
+//        case GLFW_KEY_A:
+//            g_displayArcball = !g_displayArcball;
+//            break;
         case GLFW_KEY_U:
             if (g_playingAnimation) {
                 cerr << "Cannot operate when playing animation" << endl;
@@ -1101,33 +1103,33 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
                 cerr << "No key frame defined" << endl;
             }
             break;
-        case GLFW_KEY_D:
-            if (g_playingAnimation) {
-                cerr << "Cannot operate when playing animation" << endl;
-                break;
-            }
-            if (g_curKeyFrame != g_animator.keyFramesEnd()) {
-                Animator::KeyFrameIter newCurKeyFrame = g_curKeyFrame;
-                cerr << "Deleting current frame [" << g_curKeyFrameNum << "]"
-                     << endl;
-                ;
-                if (g_curKeyFrame == g_animator.keyFramesBegin()) {
-                    ++newCurKeyFrame;
-                } else {
-                    --newCurKeyFrame;
-                    --g_curKeyFrameNum;
-                }
-                g_animator.deleteKeyFrame(g_curKeyFrame);
-                g_curKeyFrame = newCurKeyFrame;
-                if (g_curKeyFrame != g_animator.keyFramesEnd()) {
-                    g_animator.pushKeyFrameToSg(g_curKeyFrame);
-                    cerr << "Now at frame [" << g_curKeyFrameNum << "]" << endl;
-                } else
-                    cerr << "No frames defined" << endl;
-            } else {
-                cerr << "Frame list is now EMPTY" << endl;
-            }
-            break;
+//        case GLFW_KEY_D:
+//            if (g_playingAnimation) {
+//                cerr << "Cannot operate when playing animation" << endl;
+//                break;
+//            }
+//            if (g_curKeyFrame != g_animator.keyFramesEnd()) {
+//                Animator::KeyFrameIter newCurKeyFrame = g_curKeyFrame;
+//                cerr << "Deleting current frame [" << g_curKeyFrameNum << "]"
+//                     << endl;
+//                ;
+//                if (g_curKeyFrame == g_animator.keyFramesBegin()) {
+//                    ++newCurKeyFrame;
+//                } else {
+//                    --newCurKeyFrame;
+//                    --g_curKeyFrameNum;
+//                }
+//                g_animator.deleteKeyFrame(g_curKeyFrame);
+//                g_curKeyFrame = newCurKeyFrame;
+//                if (g_curKeyFrame != g_animator.keyFramesEnd()) {
+//                    g_animator.pushKeyFrameToSg(g_curKeyFrame);
+//                    cerr << "Now at frame [" << g_curKeyFrameNum << "]" << endl;
+//                } else
+//                    cerr << "No frames defined" << endl;
+//            } else {
+//                cerr << "Frame list is now EMPTY" << endl;
+//            }
+//            break;
         case GLFW_KEY_PERIOD: // >
             if (!(mods & GLFW_MOD_SHIFT)) break;
             if (g_playingAnimation) {
@@ -1159,10 +1161,10 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
                      << endl;
             }
             break;
-        case GLFW_KEY_W:
-            cerr << "Writing animation to animation.txt\n";
-            g_animator.saveAnimation("animation.txt");
-            break;
+//        case GLFW_KEY_W:
+//            cerr << "Writing animation to animation.txt\n";
+//            g_animator.saveAnimation("animation.txt");
+//            break;
         case GLFW_KEY_I:
             if (g_playingAnimation) {
                 cerr << "Cannot operate when playing animation" << endl;
@@ -1220,6 +1222,72 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
             g_hairyness /= 1.05;
             cerr << "hairyness = " << g_hairyness << std::endl;
             updateShellGeometry();
+            break;
+        case GLFW_KEY_W: {
+            // move clipper deeper
+            cout << "moved by " << depthSpd << endl;
+            RigTForm M = RigTForm(Cvec3(0, depthSpd, 0));
+            RigTForm A = makeMixedFrame(getArcballRbt(),
+                                        getPathAccumRbt(g_world, g_currentCameraNode));
+            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+
+            }
+            break;
+        case GLFW_KEY_S: {
+            // move clipper deeper
+            cout << "moved by " << depthSpd << endl;
+            RigTForm M = RigTForm(Cvec3(0, -depthSpd, 0));
+            RigTForm A = makeMixedFrame(getArcballRbt(),
+                                        getPathAccumRbt(g_world, g_currentCameraNode));
+            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+
+            }
+            break;
+        case GLFW_KEY_A: {
+            // move clipper deeper
+            cout << "moved by " << depthSpd << endl;
+            RigTForm M = RigTForm(Cvec3(-depthSpd, 0, 0));
+            RigTForm A = makeMixedFrame(getArcballRbt(),
+                                        getPathAccumRbt(g_world, g_currentCameraNode));
+            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+
+            }
+            break;
+        case GLFW_KEY_D: {
+            // move clipper deeper
+            cout << "moved by " << depthSpd << endl;
+            RigTForm M = RigTForm(Cvec3(depthSpd, 0, 0));
+            RigTForm A = makeMixedFrame(getArcballRbt(),
+                                        getPathAccumRbt(g_world, g_currentCameraNode));
+            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+
+            }
+            break;
+        case GLFW_KEY_Z: {
+            // move clipper deeper
+            cout << "moved by " << depthSpd << endl;
+            RigTForm M = RigTForm(Cvec3(0, 0, -depthSpd));
+            RigTForm A = makeMixedFrame(getArcballRbt(),
+                                        getPathAccumRbt(g_world, g_currentCameraNode));
+            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+
+            }
+            break;
+        case GLFW_KEY_X: {
+            // pull clipper out
+
+            RigTForm M = RigTForm(Cvec3(0, 0, depthSpd));
+            RigTForm A = makeMixedFrame(getArcballRbt(),
+                                        getPathAccumRbt(g_world, g_currentCameraNode));
+            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+
+            }
             break;
         }
     } else {
