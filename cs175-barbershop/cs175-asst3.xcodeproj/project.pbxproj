@@ -183,6 +183,8 @@
 		4E5E74512A05A000005B20D2 /* trimmer.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = trimmer.mesh; sourceTree = "<group>"; };
 		4E5E74522A05AC36005B20D2 /* tyrionhead.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrionhead.mesh; sourceTree = "<group>"; };
 		4E5E74532A08612F005B20D2 /* trimmer2.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = trimmer2.mesh; sourceTree = "<group>"; };
+		4E5E74542A089AB5005B20D2 /* tyrion_head2.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_head2.mesh; sourceTree = "<group>"; };
+		4E5E74552A089B70005B20D2 /* tyrion_head3.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_head3.mesh; sourceTree = "<group>"; };
 		4EDCBCCD29D77FDC00FC3596 /* libglfw.3.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libglfw.3.3.dylib; sourceTree = "<group>"; };
 		4EDCBCCE29D77FDC00FC3596 /* libGLEW.2.2.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libGLEW.2.2.0.dylib; sourceTree = "<group>"; };
 		4EF929CF29B7D89B0046FAC1 /* libGLEW.2.2.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGLEW.2.2.0.dylib; path = ../../../../../../usr/local/Cellar/glew/2.2.0_1/lib/libGLEW.2.2.0.dylib; sourceTree = "<group>"; };
@@ -392,6 +394,8 @@
 				4E5E74092A0422AF005B20D2 /* lib */,
 				4E5E74072A0422AF005B20D2 /* main */,
 				4E5E741A2A0422AF005B20D2 /* main.cpp */,
+				4E5E74552A089B70005B20D2 /* tyrion_head3.mesh */,
+				4E5E74542A089AB5005B20D2 /* tyrion_head2.mesh */,
 				4E5E74532A08612F005B20D2 /* trimmer2.mesh */,
 				4E5E74522A05AC36005B20D2 /* tyrionhead.mesh */,
 				4E5E74512A05A000005B20D2 /* trimmer.mesh */,

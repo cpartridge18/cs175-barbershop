@@ -105,7 +105,7 @@ static vector<shared_ptr<Material>> g_bunnyShellMats; // for bunny shells
 
 // New Geometry
 static const int g_numShells = 24; // constants defining how many layers of shells
-static double g_furHeight = 0.5;
+static double g_furHeight = 0.4;
 static double g_hairyness = 0.7;
 static bool g_shellNeedsUpdate = false;
 
@@ -507,7 +507,7 @@ static void updateShellGeometry() {
                 Cvec3 p = v.getPosition();
                 Cvec3 norm = v.getNormal();
                 Cvec3 t = g_headTipPos[(i*3)+j];
-                Cvec3 s = p + (norm*g_furHeight);
+                Cvec3 s = p + (norm*g_hairLengths[i]);
 //                Cvec3 s = p + (norm* g_headMesh.getFace(i).getHairHeight());
           
                 // translate t into object coordinates
@@ -1418,11 +1418,16 @@ static void initMaterials() {
     g_bunnyMat->getUniforms().put("uColorAmbient", Cvec3f(0.45f, 0.3f, 0.3f))
                              .put("uColorDiffuse", Cvec3f(0.2f, 0.2f, 0.2f));
     
-    // bunny material
-    g_shaverMat.reset(new Material("./shaders/basic-gl3.vshader",
-                                  "./shaders/bunny-gl3.fshader"));
-    g_shaverMat->getUniforms().put("uColorAmbient", Cvec3f(0.2f, 0.2f, 0.2f))
+    // allocate array of materials
+    g_bunnyShellMats.resize(g_numShells);
+    g_bunnyShellMats[0].reset(new Material("./shaders/basic-gl3.vshader",
+                                           "./shaders/bunny-gl3.fshader"));
+    g_bunnyShellMats[0]->getUniforms().put("uColorAmbient", Cvec3f(0.45f, 0.3f, 0.3f))
                              .put("uColorDiffuse", Cvec3f(0.2f, 0.2f, 0.2f));
+    
+    // bunny material
+    g_shaverMat.reset(new Material(diffuse));
+    g_shaverMat->getUniforms().put("uColor", Cvec3f(0.2, 0.2, 0.2));
     
     // copy solid prototype, and set to color white
     g_chairMat.reset(new Material(diffuse));
@@ -1446,12 +1451,10 @@ static void initMaterials() {
     bunnyShellMatPrototype.getUniforms().put("uTexShell", shellTexture);
     bunnyShellMatPrototype.getRenderStates()
         .blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) // set blending mode
-        .enable(GL_BLEND)                                // enable blending
+        .enable(GL_BLEND)                           // enable blending
         .disable(GL_CULL_FACE);                          // disable culling
 
-    // allocate array of materials
-    g_bunnyShellMats.resize(g_numShells);
-    for (int i = 0; i < g_numShells; ++i) {
+    for (int i = 1; i < g_numShells; ++i) {
         // copy prototype
         g_bunnyShellMats[i].reset(new Material(bunnyShellMatPrototype));
         // but set a different exponent for blending transparency
@@ -1690,8 +1693,7 @@ static void constructRobot(shared_ptr<SgTransformNode> base,
 static void initScene() {
     g_world.reset(new SgRootNode());
 
-
-    g_skyNode.reset(new SgRbtNode(RigTForm(Cvec3(0.0, 3.5, 7.0))));
+    g_skyNode.reset(new SgRbtNode(RigTForm(Cvec3(0.0, 4, 6.0))));
 
     g_groundNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY, 0))));
     g_groundNode->addChild(
@@ -1708,25 +1710,28 @@ static void initScene() {
 
     //constructRobot(g_robot1Node, g_redDiffuseMat);  // a Red robot
     //constructRobot(g_robot2Node, g_blueDiffuseMat); // a Blue robot
-    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4.5, 1))));
+
+    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4, 1))));
+
     // add bunny as a shape nodes
     g_headNode->addChild(
         shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat, Cvec3(0, 0, 0), Cvec3(0, 0, 0), Cvec3(1))));
   
     // add each shell as shape node
+    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat, Cvec3(0, -.8, .4), Cvec3(0, 0, 0), Cvec3(1.1))));
     
     // helllooooo
     for (int i = 0; i < g_numShells; ++i) {
         g_headNode->addChild(shared_ptr<MyShapeNode>(
             new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i], Cvec3(0), Cvec3(0, 0, 0), Cvec3(1))));
     }
-    g_headNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_headNoHairGeometry, g_bunnyMat, Cvec3(0, -0.6, 0.3), Cvec3(0, 0, 0), Cvec3(1))));
+    //0,  -.55, .4
     
     
     g_chairNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
     g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 2, 0.6), Cvec3(0, 0, 0), Cvec3(2))));
      
-    g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-1, 5, 0))));
+    g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-3, 5, 0))));
 
     g_cutNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0.48))));
     g_cutNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_cube, g_bunnyMat, Cvec3(0), Cvec3(0), Cvec3(.01, .01, .01))));
@@ -1767,12 +1772,12 @@ static void initScene() {
     g_world->addChild(g_groundNode);
     //g_world->addChild(g_robot1Node);
    // g_world->addChild(g_robot2Node);
-    g_world->addChild(g_headNode);
     g_world->addChild(g_light1);
     g_world->addChild(g_light2);
     g_world->addChild(g_bunnyNode);
     g_world->addChild(g_shaverNode);
     g_world->addChild(g_chairNode);
+    g_world->addChild(g_headNode);
     
 //    if (!g_preRender) {
 //        g_world->addChild(g_mirrorNode);
