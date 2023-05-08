@@ -714,7 +714,7 @@ static void checkCutLength() {
             cerr << "does this happen?" << "\n";
             RigTForm cur = g_shaverNode->getRbt();
             g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headMesh.getFace(i).getNormal()*.01), cur.getRotation()));
-        }
+        } 
         
         // after updating hair length, update maximum hair length
         if (maxHairLen < g_hairLengths[i]) {
