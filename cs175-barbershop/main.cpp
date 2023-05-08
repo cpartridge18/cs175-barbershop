@@ -722,6 +722,37 @@ static void checkCutLength() {
         }
         
     }
+    
+    for (int i = 0; i < g_headNoHairMesh.getNumFaces(); i++) {
+       
+        
+        double cntr_x = 0;
+        double cntr_y = 0;
+        double cntr_z = 0;
+        for (int j = 0; j < g_headNoHairMesh.getFace(i).getNumVertices(); j++) {
+            
+            // convert center of face to world cordinates
+            Cvec3 p = (RigTForm(headObj.getTranslation() + Cvec3(0, -.8, .4), headObj.getRotation()) * RigTForm(g_headNoHairMesh.getFace(i).getVertex(j).getPosition())).getTranslation();
+            cntr_x += p[0];
+            cntr_y += p[1];
+            cntr_z += p[2];
+            
+        }
+        Cvec3 centroid = Cvec3((cntr_x / 3), (cntr_y / 3), (cntr_z / 3));
+        
+        
+        float noHair_dist = sqrt(pow((centroid[0] - shavObj.getTranslation()[0]), 2) + pow((centroid[1] - shavObj.getTranslation()[1]), 2) + pow((centroid[2] - shavObj.getTranslation()[2]), 2));
+        
+        if (noHair_dist < .1) {
+            cerr << "does this happen?" << "\n";
+            RigTForm cur = g_shaverNode->getRbt();
+            g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headNoHairMesh.getFace(i).getNormal()*.001), cur.getRotation()));
+        }
+        
+    }
+    
+    
+    
     if (maxHairLen < 0.4) {
         g_won = true;
         cout << "YOU WIN" << endl;
