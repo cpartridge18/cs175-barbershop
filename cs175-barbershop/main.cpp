@@ -96,6 +96,8 @@ static bool g_pickingMode = false;
 
 static bool g_playingAnimation = false;
 
+static bool g_won = false;
+
 // Material
 static shared_ptr<Material> g_bunnyMat, g_chairMat; // for the bunny
 
@@ -126,7 +128,6 @@ static double g_stiffness = 4;
 static int g_simulationsPerSecond = 60;
 
 bool g_preRender = true;
-
 float depthSpd = 0.1;
 
 static std::vector<Cvec3>
@@ -649,6 +650,7 @@ static void hairsSimulationUpdate() {
 static void checkCutLength() {
     // find the distance b/e center of face and clipper object
     
+
     
     cerr << "G_CUT NODE: " << g_cutNode->getRbt().getTranslation()[0] << g_cutNode->getRbt().getTranslation()[1] << g_cutNode->getRbt().getTranslation()[2] << "\n";
     
@@ -656,14 +658,13 @@ static void checkCutLength() {
 //    RigTForm shavRbt = g_shaverNode->getRbt();
 //    shared_ptr<SgRbtNode> newShavNode;
 //    newShavNode.reset(new SgRbtNode(RigTForm(shavRbt.getTranslation() + Cvec3(0, 0.5, 0), shavRbt.getRotation())));
+
+    double maxHairLen = 0;
+
     // shaver in world coords
     RigTForm shavObj = getPathAccumRbt(g_world, g_cutNode);
 //    shavObj = RigTForm(shavObj.getTranslation() + Cvec3(0, 0, 0), shavObj.getRotation());
     RigTForm headObj = getPathAccumRbt(g_world, g_headNode);
-    
-    
-//    cout << "cliper xpos" << shavObj.getTranslation()[0] << endl;
-//    cout << "cliper ypos" << shavObj.getTranslation()[1] << endl;
     
     for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
 
@@ -717,6 +718,18 @@ static void checkCutLength() {
             g_hairLengths[i] = dist;
 //            g_headMesh.getFace(i).setHairHeight(0);
         }
+        
+        // after updating hair length, update maximum hair length
+        if (maxHairLen < g_hairLengths[i]) {
+            maxHairLen = g_hairLengths[i];
+        }
+        
+    }
+    if (maxHairLen < 0.4) {
+        g_won = true;
+        cout << "YOU WIN" << endl;
+        cout << "YOU WIN" << endl;
+        cout << "YOU WIN" << endl;
     }
     
 }
@@ -821,8 +834,6 @@ bool interpolateAndDisplay(float t) {
     return false;
 }
 
-
-// chrisp branch test
 static void animationUpdate() {
     if (g_playingAnimation) {
         bool endReached = interpolateAndDisplay((float) g_animateTime / g_msBetweenKeyFrames);
@@ -1020,25 +1031,11 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
         case GLFW_KEY_ESCAPE:
             exit(0);
         case GLFW_KEY_H:
-            cout << " ============== H E L P ==============\n\n"
-                 << "h\t\thelp menu\n"
-                 << "use wasd and zx to move clippers around, in and out"
-                 << "s\t\tsave screenshot\n"
-                 << "f\t\tToggle flat shading on/off.\n"
-                 << "p\t\tUse mouse to pick a part to edit\n"
-                 << "v\t\tCycle view\n"
-                 << "drag left mouse to rotate\n"
-                 << "a\t\tToggle display arcball\n"
-                 << "w\t\tWrite animation to animation.txt\n"
-                 << "i\t\tRead animation from animation.txt\n"
-                 << "c\t\tCopy frame to scene\n"
-                 << "u\t\tCopy sceneto frame\n"
-                 << "n\t\tCreate new frame after current frame and copy scene to "
-                "it\n"
-                 << "d\t\tDelete frame\n"
-                 << ">\t\tGo to next frame\n"
-                 << "<\t\tGo to prev. frame\n"
-                 << "y\t\tPlay/Stop animation\n"
+            cout << " ============== H E L P ==============\n"
+                 << "h   \t\thelp menu\n\n"
+                 << "Welcome to the barbershop! Your task is to give our client, Tyrion Lannister, the hair cut of his life as he prepares for the battle to defend his countrymen. Use the controls below and the mouse to save the kingdom. \n\n"
+                 << "w,a,s,d \t Move the clippers up and down and side to side. \n"
+                 << "z,x \t\t Move the clippers in and out. \n"
                  << endl;
             break;
 //        case GLFW_KEY_S:
@@ -1297,7 +1294,12 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
 
             }
             break;
+        case GLFW_KEY_K: {
+            // cheat code to win
+            g_won = true;
+        }break;
         }
+    
     } else {
         switch(key) {
         case GLFW_KEY_SPACE:
@@ -1691,7 +1693,8 @@ static void constructRobot(shared_ptr<SgTransformNode> base,
 static void initScene() {
     g_world.reset(new SgRootNode());
 
-    g_skyNode.reset(new SgRbtNode(RigTForm(Cvec3(0.0, 5, 4.0))));
+
+    g_skyNode.reset(new SgRbtNode(RigTForm(Cvec3(0.0, 3.5, 7.0))));
 
     g_groundNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY, 0))));
     g_groundNode->addChild(
@@ -1708,7 +1711,7 @@ static void initScene() {
 
     //constructRobot(g_robot1Node, g_redDiffuseMat);  // a Red robot
     //constructRobot(g_robot2Node, g_blueDiffuseMat); // a Blue robot
-    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4, 0))));
+    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4.5, 1))));
     // add bunny as a shape nodes
     g_headNode->addChild(
         shared_ptr<MyShapeNode>(new MyShapeNode(g_headGeometry, g_bunnyMat, Cvec3(0, 0, 0), Cvec3(0, 0, 0), Cvec3(1))));
@@ -1727,12 +1730,14 @@ static void initScene() {
     g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 2, 0.6), Cvec3(0, 0, 0), Cvec3(2))));
      
     g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-1, 5, 0))));
+
     g_cutNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0.48))));
     g_cutNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_cube, g_bunnyMat, Cvec3(0), Cvec3(0), Cvec3(.01, .01, .01))));
     g_shaverNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_trimmerGeometry, g_shaverMat, Cvec3(0), Cvec3(0), Cvec3(.5, .5, .5))));
     g_shaverNode->addChild(g_cutNode);
     g_light1.reset(new SgRbtNode(RigTForm(Cvec3(4.0, 3.0, 5.0))));
     g_light2.reset(new SgRbtNode(RigTForm(Cvec3(-4, 1.0, -4.0))));
+
     g_light1->addChild(shared_ptr<MyShapeNode>(
         new MyShapeNode(g_sphere, g_lightMat, Cvec3(0), Cvec3(0), Cvec3(0.5))));
 
@@ -1784,6 +1789,7 @@ static void initAnimation() {
     g_curKeyFrame = g_animator.keyFramesBegin();
 }
 
+
 static void glfwLoop() {
     g_lastFrameClock = glfwGetTime();
 
@@ -1796,7 +1802,7 @@ static void glfwLoop() {
 
             checkCutLength();
             hairsSimulationUpdate();
-            
+        
             //preRender();
 
             display();
