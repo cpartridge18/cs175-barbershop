@@ -176,7 +176,6 @@
 		4E5E74402A0422B0005B20D2 /* drawer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = drawer.h; sourceTree = "<group>"; };
 		4E5E74412A0422B0005B20D2 /* glsupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = glsupport.h; sourceTree = "<group>"; };
 		4E5E744C2A056DD4005B20D2 /* output.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = output.mesh; sourceTree = "<group>"; };
-		4E5E744D2A057A2A005B20D2 /* trump.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = trump.mesh; sourceTree = "<group>"; };
 		4E5E744E2A05880E005B20D2 /* tyrion.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion.mesh; sourceTree = "<group>"; };
 		4E5E744F2A058B28005B20D2 /* tyrion_head.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_head.mesh; sourceTree = "<group>"; };
 		4E5E74502A0597EE005B20D2 /* tyrion_nohair.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_nohair.mesh; sourceTree = "<group>"; };
@@ -409,7 +408,6 @@
 				4E5E74382A0422AF005B20D2 /* material.o */,
 				4E5E740C2A0422AF005B20D2 /* matrix4.h */,
 				4E5E74172A0422AF005B20D2 /* mesh.h */,
-				4E5E744D2A057A2A005B20D2 /* trump.mesh */,
 				4E5E744E2A05880E005B20D2 /* tyrion.mesh */,
 				4E5E743E2A0422B0005B20D2 /* mesh.interface */,
 				4E5E740F2A0422AF005B20D2 /* picker.cpp */,
