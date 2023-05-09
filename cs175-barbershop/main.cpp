@@ -671,7 +671,6 @@ static void checkCutLength() {
         }
         
         if (dist < .1) {
-            cerr << "does this happen?" << "\n";
             RigTForm cur = g_shaverNode->getRbt();
             g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headMesh.getFace(i).getNormal()*.01), cur.getRotation()));
         } 
@@ -1373,14 +1372,11 @@ static void initMaterials() {
     g_blueDiffuseMat->getUniforms().put("uColor", Cvec3f(0, 0, 1));
 
     // normal mapping
-    g_bumpFloorMat.reset(new Material("./shaders/normal-gl3.vshader",
-                                      "./shaders/normal-gl3.fshader"));
+    g_bumpFloorMat.reset(new Material("./shaders/floor.vshader",
+                                      "./shaders/floor.fshader"));
     g_bumpFloorMat->getUniforms().put(
         "uTexColor",
         shared_ptr<ImageTexture>(new ImageTexture("wood.ppm", true)));
-    g_bumpFloorMat->getUniforms().put(
-        "uTexNormal", shared_ptr<ImageTexture>(
-                          new ImageTexture("woodNormal.ppm", false)));
 
     // copy solid prototype, and set to wireframed rendering
     g_arcballMat.reset(new Material(solid));
@@ -1495,9 +1491,6 @@ static void initMeshes() {
     // TODO: Init the per vertex normal of g_bunnyMesh; see "calculating
     // normals" section of spec
     // ...
- 
-    cerr << "NUM OF VERTICES: " << g_headMesh.getNumVertices() << "\n";
-    cerr << "NUM OF Faces: " << g_headMesh.getNumFaces() << "\n";
     
     initNormals(g_headMesh);
     initNormals(g_headNoHairMesh);
