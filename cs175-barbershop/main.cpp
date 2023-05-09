@@ -1006,7 +1006,7 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
             g_spaceDown = true;
             break;
         case GLFW_KEY_ESCAPE:
-            exit(0);
+            exit(0); 
         case GLFW_KEY_H:
             cout << " ============== H E L P ==============\n"
                  << "h   \t\thelp menu\n\n"
