@@ -99,7 +99,7 @@ static bool g_playingAnimation = false;
 static bool g_won = false;
 
 // Material
-static shared_ptr<Material> g_bunnyMat, g_chairMat; // for the bunny
+static shared_ptr<Material> g_bunnyMat; // for the bunny
 
 static vector<shared_ptr<Material>> g_bunnyShellMats; // for bunny shells
 
@@ -128,7 +128,7 @@ static double g_stiffness = 4;
 static int g_simulationsPerSecond = 60;
 
 bool g_preRender = true;
-float depthSpd = 0.1;
+float depthSpd = 0.05; 
 
 static std::vector<Cvec3>
     g_ogTipPos,
@@ -139,7 +139,7 @@ vector<double> g_hairLengths;
 
 // --------- Materials
 static shared_ptr<Material> g_redDiffuseMat, g_blueDiffuseMat, g_bumpFloorMat,
-    g_arcballMat, g_pickingMat, g_lightMat, g_shaverMat, g_mirrorMat;
+    g_arcballMat, g_pickingMat, g_lightMat, g_shaverMat, g_mirrorMat, g_chairMat;
 
 shared_ptr<Material> g_overridingMaterial;
 
@@ -305,24 +305,7 @@ static void initSimulation() {
     // TASK 1 TODO: initialize g_tipPos to "at-rest" hair tips in world
     // coordinates
     
-    RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
-    
-//    for (int i = 0; i < g_bunnyMesh.getNumFaces(); i++) {
-//        for (int j = 0; j < g_bunnyMesh.getFace(i).getNumVertices(); j++) {
-//            Mesh::Vertex v = g_bunnyMesh.getFace(i).getVertex(j);
-//
-//            Cvec3 p = v.getPosition();
-//            Cvec3 norm = v.getNormal();
-////            Cvec3 t = p + (norm*g_furHeight);
-////            Cvec3 t = p + (norm*g_hairLengths[i]);
-//            Cvec3 t = p + (norm * g_hairLengths[i]);
-//
-//            g_tipPos.push_back((obj * RigTForm(t)).getTranslation());
-//            g_tipVelocity.push_back(Cvec3(0, 0, 0));
-//        }
-//    }
-    
-    obj = getPathAccumRbt(g_world, g_headNode);
+    RigTForm obj = getPathAccumRbt(g_world, g_headNode);
     
     for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
         for (int j = 0; j < g_headMesh.getFace(i).getNumVertices(); j++) {
@@ -357,20 +340,6 @@ static void initGround() {
     // MAKE MIRROR
 }
 
-static void initMirror() {
-    int ibLen, vbLen;
-    getPlaneVbIbLen(vbLen, ibLen);
-
-    // Temporary storage for cube Geometry
-    vector<VertexPNTBX> vtx(vbLen);
-    vector<unsigned short> idx(ibLen);
-
-    makePlane(g_groundSize, vtx.begin(), idx.begin());
-    g_mirror.reset(
-        new SimpleIndexedGeometryPNTBX(&vtx[0], &idx[0], vbLen, ibLen));
-    // MAKE MIRROR
-}
-
 static void initCubes() {
     int ibLen, vbLen;
     getCubeVbIbLen(vbLen, ibLen);
@@ -394,10 +363,6 @@ static void initSphere() {
     makeSphere(1, 20, 10, vtx.begin(), idx.begin());
     g_sphere.reset(new SimpleIndexedGeometryPNTBX(&vtx[0], &idx[0], vtx.size(),
                                                   idx.size()));
-}
-
-static void initRobots() {
-    // Init whatever extra geometry  needed for the robots
 }
 
 // takes a projection matrix and send to the the shaders
@@ -488,13 +453,11 @@ static void drawArcBall(Uniforms &uniforms) {
 // You need to call this function whenver the shell needs to be updated
 static void updateShellGeometry() {
     // TASK 1 and 3 TODO: finish this function as part of Task 1 and Task 3
-    
-    RigTForm obj = getPathAccumRbt(g_world, g_bunnyNode);
-    
+        
+    RigTForm obj = getPathAccumRbt(g_world, g_headNode);
+
     for (int k = 0; k < g_numShells; k++) {
         
-        obj = getPathAccumRbt(g_world, g_headNode);
-
         vector<VertexPNX> vec2;
         vec2.reserve(g_headMesh.getNumFaces() * 3);
         
@@ -564,11 +527,8 @@ static void drawStuff(bool picking, bool mirror=false) {
     const Matrix4 projmat = makeProjectionMatrix();
     sendProjectionMatrix(uniforms, projmat);
     
-    if (mirror) {
-        g_currentCameraNode = g_mirrorNode;
-    } else {
-        g_currentCameraNode = g_skyNode;
-    }
+
+    g_currentCameraNode = g_skyNode;
 
     const RigTForm eyeRbt = getPathAccumRbt(g_world, g_currentCameraNode);
     const RigTForm invEyeRbt = inv(eyeRbt);
@@ -595,7 +555,7 @@ static void drawStuff(bool picking, bool mirror=false) {
         g_currentPickedRbtNode =
             picker.getRbtNodeAtXY(g_mouseClickX * g_wScale,
                                   g_mouseClickY * g_hScale);
-        if (g_currentPickedRbtNode == g_groundNode)
+        if (g_currentPickedRbtNode == g_groundNode or g_currentPickedRbtNode == g_mirrorNode)
             g_currentPickedRbtNode.reset(); // set to NULL
 
         cout << (g_currentPickedRbtNode ? "Part picked" : "No part picked")
@@ -815,13 +775,7 @@ static void preRender() {
     // set texture to be equal to buffer
 
     checkGlErrors();
-    
-    g_preRender = false;
-//
-//    // normal mapping but to the mirror and just using this for texture
-//    g_mirrorMat.reset(new Material("./shaders/mirror-gl3.vshader",
-//                                      "./shaders/mirror-gl3.fshader"));
-//    g_mirrorMat->getUniforms().put("uTexColor",GLuint (renderedTexture));
+
 }
 
 static void display() {
@@ -1391,7 +1345,7 @@ static void initGlfwState() {
 }
 
 static void initGLState() {
-    glClearColor(128. / 255., 200. / 255., 255. / 255., 0.);
+    glClearColor(173. / 255., 216. / 255., 230. / 255., 0.);
     glClearDepth(0.);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -1400,7 +1354,7 @@ static void initGLState() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GREATER);
     glReadBuffer(GL_BACK);
-        glEnable(GL_FRAMEBUFFER_SRGB);
+    glEnable(GL_FRAMEBUFFER_SRGB);
 }
 
 static void initMaterials() {
@@ -1423,11 +1377,10 @@ static void initMaterials() {
                                       "./shaders/normal-gl3.fshader"));
     g_bumpFloorMat->getUniforms().put(
         "uTexColor",
-        shared_ptr<ImageTexture>(new ImageTexture("Fieldstone.ppm", true)));
+        shared_ptr<ImageTexture>(new ImageTexture("wood.ppm", true)));
     g_bumpFloorMat->getUniforms().put(
         "uTexNormal", shared_ptr<ImageTexture>(
-                          new ImageTexture("FieldstoneNormal.ppm", false)));
-
+                          new ImageTexture("woodNormal.ppm", false)));
 
     // copy solid prototype, and set to wireframed rendering
     g_arcballMat.reset(new Material(solid));
@@ -1437,13 +1390,6 @@ static void initMaterials() {
     // copy solid prototype, and set to color white
     g_lightMat.reset(new Material(solid));
     g_lightMat->getUniforms().put("uColor", Cvec3f(1, 1, 1));
-    
-    g_shaverMat.reset(new Material("./shaders/normal-gl3.vshader",
-                                   "./shaders/normal-gl3.fshader"));
-    g_shaverMat->getUniforms().put("uTexColor", shared_ptr<ImageTexture>(new ImageTexture("Clippers.ppm", true)));
-    g_shaverMat->getUniforms().put(
-        "uTexNormal", shared_ptr<ImageTexture>(
-                          new ImageTexture("FieldstoneNormal.ppm", false)));
     
     // pick shader
     g_pickingMat.reset(new Material("./shaders/basic-gl3.vshader",
@@ -1464,12 +1410,13 @@ static void initMaterials() {
     
     // bunny material
     g_shaverMat.reset(new Material(diffuse));
-    g_shaverMat->getUniforms().put("uColor", Cvec3f(0.2, 0.2, 0.2));
+    g_shaverMat->getUniforms().put("uColor", Cvec3f(255. / 255, 105. / 255, 180. / 255));
     
     // copy solid prototype, and set to color white
     g_chairMat.reset(new Material(diffuse));
     g_chairMat->getUniforms().put("uColor", Cvec3f(0.2, 0.2, 0.2));
-
+    
+    
     // bunny shell materials;
     // common shell texture:
     shared_ptr<ImageTexture> shellTexture(new ImageTexture("shell.ppm", false));
@@ -1500,67 +1447,6 @@ static void initMaterials() {
     }
     
 };
-
-// New function that loads the bunny mesh and initializes the bunny shell meshes
-static void initBunnyMeshes() {
-    g_bunnyMesh.load("bunny.mesh");
-
-    // TODO: Init the per vertex normal of g_bunnyMesh; see "calculating
-    // normals" section of spec
-    // ...
-
-    
-    for (int i = 0; i < g_bunnyMesh.getNumVertices(); ++i) {
-      const Mesh::Vertex v = g_bunnyMesh.getVertex(i);
-        
-      Cvec3 avg_normal;
-      int counter = 0;
-
-      Mesh::VertexIterator it(v.getIterator()), it0(it);
-      do
-      {
-          avg_normal += (it.getFace().getNormal());      // can use here it.getVertex(), it.getFace()
-          counter++;
-      }
-      while (++it != it0); // go around once the 1ring
-        
-      avg_normal /= counter;
-        
-      v.setNormal(avg_normal);
-    }
-
-    // TODO: Initialize g_bunnyGeometry from g_bunnyMesh; see "mesh preparation"
-    // section of spec
-    // ...
-    
-    vector<VertexPN> vec;
-    vec.reserve(g_bunnyMesh.getNumFaces() * 3);
-    
-    for (int i = 0; i < g_bunnyMesh.getNumFaces(); i++) {
-        for (int j = 0; j < g_bunnyMesh.getFace(i).getNumVertices(); j++) {
-            Mesh::Vertex v = g_bunnyMesh.getFace(i).getVertex(j);
-            VertexPN vertex = VertexPN(v.getPosition(), v.getNormal());
-            // Make VertexPN
-            vec.push_back(vertex);
-        }
-    }
-    g_bunnyGeometry.reset(new SimpleGeometryPN);
-    
-    VertexPN* vertices = &vec[0];
-    g_bunnyGeometry->upload(vertices, g_bunnyMesh.getNumFaces() * 3);
-
-
-
-    // Now allocate array of SimpleGeometryPNX to for shells, one per layer
-    g_bunnyShellGeometries.resize(g_numShells);
-    for (int i = 0; i < g_numShells; ++i) {
-        g_bunnyShellGeometries[i].reset(new SimpleGeometryPNX());
-    }
-    
-   // updateShellGeometry();
-    
-    
-}
 
 static void initNormals(Mesh &m) {
     for (int i = 0; i < m.getNumVertices(); ++i) {
@@ -1599,13 +1485,12 @@ static void initGeo(Mesh &m, shared_ptr<SimpleGeometryPN> &g) {
 }
 
 // New function that loads the bunny mesh and initializes the bunny shell meshes
-static void initHeadMeshes() {
+static void initMeshes() {
     g_headMesh.load("tyrionhead.mesh");
     g_headNoHairMesh.load("tyrion_nohair.mesh");
     g_trimmerMesh.load("trimmer2.mesh");
     g_chairMesh.load("chair.mesh");
-    
- 
+
     //g_headMesh.subdivide();  
     // TODO: Init the per vertex normal of g_bunnyMesh; see "calculating
     // normals" section of spec
@@ -1634,97 +1519,14 @@ static void initHeadMeshes() {
         g_headShellGeometries[i].reset(new SimpleGeometryPNX());
     }
     
-   // updateShellGeometry();
-    
     
 }
 
 static void initGeometry() {
     initGround();
-    initMirror();
     initCubes();
     initSphere();
-    initRobots();
-    initBunnyMeshes();
-    initHeadMeshes();
-}
-
-static void constructRobot(shared_ptr<SgTransformNode> base,
-                           shared_ptr<Material> material) {
-    const float ARM_LEN = 0.7, ARM_THICK = 0.25, LEG_LEN = 1, LEG_THICK = 0.25,
-                 TORSO_LEN = 1.5, TORSO_THICK = 0.25, TORSO_WIDTH = 1,
-                 HEAD_SIZE = 0.7;
-    const int NUM_JOINTS = 10, NUM_SHAPES = 10;
-
-    struct JointDesc {
-        int parent;
-        float x, y, z;
-    };
-
-    JointDesc jointDesc[NUM_JOINTS] = {
-        {-1},                                    // torso
-        {0, TORSO_WIDTH / 2, TORSO_LEN / 2, 0},  // upper right arm
-        {0, -TORSO_WIDTH / 2, TORSO_LEN / 2, 0}, // upper left arm
-        {1, ARM_LEN, 0, 0},                      // lower right arm
-        {2, -ARM_LEN, 0, 0},                     // lower left arm
-        {0, TORSO_WIDTH / 2 - LEG_THICK / 2, -TORSO_LEN / 2,
-         0}, // upper right leg
-        {0, -TORSO_WIDTH / 2 + LEG_THICK / 2, -TORSO_LEN / 2,
-         0},                     // upper left leg
-        {5, 0, -LEG_LEN, 0},     // lower right leg
-        {6, 0, -LEG_LEN, 0},     // lower left
-        {0, 0, TORSO_LEN / 2, 0} // head
-    };
-
-    struct ShapeDesc {
-        int parentJointId;
-        float x, y, z, sx, sy, sz;
-        shared_ptr<Geometry> geometry;
-        shared_ptr<Material> material;
-    };
-
-    ShapeDesc shapeDesc[NUM_SHAPES] = {
-        {0, 0, 0, 0, TORSO_WIDTH, TORSO_LEN, TORSO_THICK, g_cube,
-         material}, // torso
-        {1, ARM_LEN / 2, 0, 0, ARM_LEN / 2, ARM_THICK / 2, ARM_THICK / 2,
-         g_sphere, material}, // upper right arm
-        {2, -ARM_LEN / 2, 0, 0, ARM_LEN / 2, ARM_THICK / 2, ARM_THICK / 2,
-         g_sphere, material}, // upper left arm
-        {3, ARM_LEN / 2, 0, 0, ARM_LEN, ARM_THICK, ARM_THICK, g_cube,
-         material}, // lower right arm
-        {4, -ARM_LEN / 2, 0, 0, ARM_LEN, ARM_THICK, ARM_THICK, g_cube,
-         material}, // lower left arm
-        {5, 0, -LEG_LEN / 2, 0, LEG_THICK / 2, LEG_LEN / 2, LEG_THICK / 2,
-         g_sphere, material}, // upper right leg
-        {6, 0, -LEG_LEN / 2, 0, LEG_THICK / 2, LEG_LEN / 2, LEG_THICK / 2,
-         g_sphere, material}, // upper left leg
-        {7, 0, -LEG_LEN / 2, 0, LEG_THICK, LEG_LEN, LEG_THICK, g_cube,
-         material}, // lower right leg
-        {8, 0, -LEG_LEN / 2, 0, LEG_THICK, LEG_LEN, LEG_THICK, g_cube,
-         material}, // lower left leg
-        {9, 0, HEAD_SIZE / 2 * 1.5f, 0, HEAD_SIZE / 2, HEAD_SIZE / 2,
-         HEAD_SIZE / 2, g_sphere, material}, // head
-    };
-
-    shared_ptr<SgTransformNode> jointNodes[NUM_JOINTS];
-
-    for (int i = 0; i < NUM_JOINTS; ++i) {
-        if (jointDesc[i].parent == -1)
-            jointNodes[i] = base;
-        else {
-            jointNodes[i].reset(new SgRbtNode(RigTForm(
-                Cvec3(jointDesc[i].x, jointDesc[i].y, jointDesc[i].z))));
-            jointNodes[jointDesc[i].parent]->addChild(jointNodes[i]);
-        }
-    }
-    for (int i = 0; i < NUM_SHAPES; ++i) {
-        shared_ptr<MyShapeNode> shape(new MyShapeNode(
-            shapeDesc[i].geometry, shapeDesc[i].material,
-            Cvec3(shapeDesc[i].x, shapeDesc[i].y, shapeDesc[i].z),
-            Cvec3(0, 0, 0),
-            Cvec3(shapeDesc[i].sx, shapeDesc[i].sy, shapeDesc[i].sz)));
-        jointNodes[shapeDesc[i].parentJointId]->addChild(shape);
-    }
+    initMeshes();
 }
 
 static void initScene() {
@@ -1735,12 +1537,6 @@ static void initScene() {
     g_groundNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY, 0))));
     g_groundNode->addChild(
         shared_ptr<MyShapeNode>(new MyShapeNode(g_ground, g_bumpFloorMat)));
-    
-//    if (!g_preRender) {
-//        g_mirrorNode.reset(new SgRbtNode(RigTForm(Cvec3(0, g_groundY + 5, 10))));
-//        g_mirrorNode->addChild(
-//            shared_ptr<MyShapeNode>(new MyShapeNode(g_mirror, g_mirrorMat, Cvec3(0), Cvec3(90, 180, 180), Cvec3(1))));
-//    }
 
     //g_robot1Node.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
     //g_robot2Node.reset(new SgRbtNode(RigTForm(Cvec3(2, 1, 0))));
@@ -1748,7 +1544,7 @@ static void initScene() {
     //constructRobot(g_robot1Node, g_redDiffuseMat);  // a Red robot
     //constructRobot(g_robot2Node, g_blueDiffuseMat); // a Blue robot
 
-    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4, 1))));
+    g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4.4, 1))));
 
     // add bunny as a shape nodes
     g_headNode->addChild(
@@ -1762,11 +1558,9 @@ static void initScene() {
         g_headNode->addChild(shared_ptr<MyShapeNode>(
             new MyShapeNode(g_headShellGeometries[i], g_bunnyShellMats[i], Cvec3(0), Cvec3(0, 0, 0), Cvec3(1))));
     }
-    //0,  -.55, .4
-    
     
     g_chairNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
-    g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 2, 0.6), Cvec3(0, 0, 0), Cvec3(2))));
+    g_chairNode->addChild(shared_ptr<MyShapeNode>(new MyShapeNode(g_chairGeometry, g_chairMat, Cvec3(0, 1.6, 0.6), Cvec3(0, 0, 0), Cvec3(2))));
      
     g_shaverNode.reset(new SgRbtNode(RigTForm(Cvec3(-3, 5, 0))));
 
@@ -1786,20 +1580,6 @@ static void initScene() {
     // Remember to move the subdiv mesh node away a bit so it doesn't block the
     // bunny.
 
-    // create a single transform node for both the bunny and the bunny
-    // shells
-    g_bunnyNode.reset(new SgRbtNode());
-    g_bunnyNode.reset(new SgRbtNode(RigTForm(Cvec3(-40, 1.0, -4.0))));
-
-    // add bunny as a shape nodes
-    g_bunnyNode->addChild(
-        shared_ptr<MyShapeNode>(new MyShapeNode(g_bunnyGeometry, g_bunnyMat)));
-
-    // add each shell as shape node
-    for (int i = 0; i < g_numShells; ++i) {
-        g_bunnyNode->addChild(shared_ptr<MyShapeNode>(
-            new MyShapeNode(g_bunnyShellGeometries[i], g_bunnyShellMats[i])));
-    }
     // from this point, calling g_bunnyShellGeometries[i]->upload(...) will
     // change the geometry of the ith layer of shell that gets drawn
 
@@ -1811,10 +1591,10 @@ static void initScene() {
    // g_world->addChild(g_robot2Node);
     g_world->addChild(g_light1);
     g_world->addChild(g_light2);
-    g_world->addChild(g_bunnyNode);
     g_world->addChild(g_shaverNode);
     g_world->addChild(g_chairNode);
     g_world->addChild(g_headNode);
+
     
 //    if (!g_preRender) {
 //        g_world->addChild(g_mirrorNode);
