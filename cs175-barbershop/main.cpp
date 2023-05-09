@@ -158,159 +158,20 @@ static shared_ptr<SgRbtNode> g_skyNode, g_groundNode, g_robot1Node,
 static shared_ptr<SgRbtNode> g_currentCameraNode;
 static shared_ptr<SgRbtNode> g_currentPickedRbtNode;
 
-// ---------- Animation
-
-class Animator {
-  public:
-    typedef vector<shared_ptr<SgRbtNode>> SgRbtNodes;
-    typedef vector<RigTForm> KeyFrame;
-    typedef list<KeyFrame> KeyFrames;
-    typedef KeyFrames::iterator KeyFrameIter;
-
-  private:
-    SgRbtNodes nodes_;
-    KeyFrames keyFrames_;
-
-  public:
-    void attachSceneGraph(shared_ptr<SgNode> root) {
-        nodes_.clear();
-        keyFrames_.clear();
-        dumpSgRbtNodes(root, nodes_);
-    }
-
-    void loadAnimation(const char *filename) {
-        ifstream f(filename, ios::binary);
-        if (!f)
-            throw runtime_error(string("Cannot load ") + filename);
-        int numFrames, numRbtsPerFrame;
-        f >> numFrames >> numRbtsPerFrame;
-        if (numRbtsPerFrame != nodes_.size()) {
-            cerr << "Number of Rbt per frame in " << filename
-                 << " does not match number of SgRbtNodes in the current scene "
-                    "graph.";
-            return;
-        }
-
-        Cvec3 t;
-        Quat r;
-        keyFrames_.clear();
-        for (int i = 0; i < numFrames; ++i) {
-            keyFrames_.push_back(KeyFrame());
-            keyFrames_.back().reserve(numRbtsPerFrame);
-            for (int j = 0; j < numRbtsPerFrame; ++j) {
-                f >> t[0] >> t[1] >> t[2] >> r[0] >> r[1] >> r[2] >> r[3];
-                keyFrames_.back().push_back(RigTForm(t, r));
-            }
-        }
-    }
-
-    void saveAnimation(const char *filename) {
-        ofstream f(filename, ios::binary);
-        int numRbtsPerFrame = nodes_.size();
-        f << getNumKeyFrames() << ' ' << numRbtsPerFrame << '\n';
-        for (KeyFrames::const_iterator frameIter = keyFrames_.begin(),
-                                       e = keyFrames_.end();
-             frameIter != e; ++frameIter) {
-            for (int j = 0; j < numRbtsPerFrame; ++j) {
-                const RigTForm &rbt = (*frameIter)[j];
-                const Cvec3 &t = rbt.getTranslation();
-                const Quat &r = rbt.getRotation();
-                f << t[0] << ' ' << t[1] << ' ' << t[2] << ' ' << r[0] << ' '
-                  << r[1] << ' ' << r[2] << ' ' << r[3] << '\n';
-            }
-        }
-    }
-
-    int getNumKeyFrames() const { return keyFrames_.size(); }
-
-    int getNumRbtNodes() const { return nodes_.size(); }
-
-    // t can be in the range [0, keyFrames_.size()-3]. Fractional amount
-    // like 1.5 is allowed.
-    void animate(double t) {
-        if (t < 0 || t > keyFrames_.size() - 3)
-            throw runtime_error("Invalid animation time parameter. Must be in "
-                                "the range [0, numKeyFrames - 3]");
-
-        t += 1; // interpret the key frames to be at t= -1, 0, 1, 2, ...
-        const int integralT = int(floor(t));
-        const double fraction = t - integralT;
-
-        KeyFrameIter f1 = getNthKeyFrame(integralT), f0 = f1, f2 = f1;
-        --f0;
-        ++f2;
-        KeyFrameIter f3 = f2;
-        ++f3;
-        if (f3 == keyFrames_.end()) // this might be true when t is exactly
-                                    // keyFrames_.size()-3.
-            f3 = f2;                // in which case we step back
-
-        for (int i = 0, n = nodes_.size(); i < n; ++i) {
-            nodes_[i]->setRbt(interpolateCatmullRom(
-                (*f0)[i], (*f1)[i], (*f2)[i], (*f3)[i], fraction));
-        }
-    }
-
-    KeyFrameIter keyFramesBegin() { return keyFrames_.begin(); }
-
-    KeyFrameIter keyFramesEnd() { return keyFrames_.end(); }
-
-    KeyFrameIter getNthKeyFrame(int n) {
-        KeyFrameIter frameIter = keyFrames_.begin();
-        advance(frameIter, n);
-        return frameIter;
-    }
-
-    void deleteKeyFrame(KeyFrameIter keyFrameIter) {
-        keyFrames_.erase(keyFrameIter);
-    }
-
-    void pullKeyFrameFromSg(KeyFrameIter keyFrameIter) {
-        for (int i = 0, n = nodes_.size(); i < n; ++i) {
-            (*keyFrameIter)[i] = nodes_[i]->getRbt();
-        }
-    }
-
-    void pushKeyFrameToSg(KeyFrameIter keyFrameIter) {
-        for (int i = 0, n = nodes_.size(); i < n; ++i) {
-            nodes_[i]->setRbt((*keyFrameIter)[i]);
-        }
-    }
-
-    KeyFrameIter insertEmptyKeyFrameAfter(KeyFrameIter beforeFrame) {
-        if (beforeFrame != keyFrames_.end())
-            ++beforeFrame;
-
-        KeyFrameIter frameIter = keyFrames_.insert(beforeFrame, KeyFrame());
-        frameIter->resize(nodes_.size());
-        return frameIter;
-    }
-};
 static int g_msBetweenKeyFrames = 2000; // 2 seconds between keyframes
 static int g_framesPerSecond = 60; // frames to render per second during animation playback
-
-static int g_animateTime = 0;
-
-static Animator g_animator;
-static Animator::KeyFrameIter g_curKeyFrame;
-static int g_curKeyFrameNum;
-
+//
 ///////////////// END OF G L O B A L S /////////////////////////////////////////
 
 // New function to initialize the dynamics simulation
 static void initSimulation() {
-//    g_tipPos.resize(g_bunnyMesh.getNumVertices(), Cvec3(0));
-//    g_tipVelocity = g_tipPos;
-
-    // TASK 1 TODO: initialize g_tipPos to "at-rest" hair tips in world
-    // coordinates
-    
     RigTForm obj = getPathAccumRbt(g_world, g_headNode);
     
     for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
+        g_hairLengths.push_back(g_furHeight);
         for (int j = 0; j < g_headMesh.getFace(i).getNumVertices(); j++) {
             Mesh::Vertex v = g_headMesh.getFace(i).getVertex(j);
-            g_hairLengths.push_back(g_furHeight);
+            
             
             Cvec3 p = v.getPosition();
             Cvec3 norm = v.getNormal();
@@ -617,6 +478,8 @@ static void checkCutLength() {
 //    shavObj = RigTForm(shavObj.getTranslation() + Cvec3(0, 0, 0), shavObj.getRotation());
     RigTForm headObj = getPathAccumRbt(g_world, g_headNode);
     
+    double sum_hairlens = 0;
+    
     for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
 
         double cntr_x = 0;
@@ -636,38 +499,9 @@ static void checkCutLength() {
         
         float dist = sqrt(pow((centroid[0] - shavObj.getTranslation()[0]), 2) + pow((centroid[1] - shavObj.getTranslation()[1]), 2) + pow((centroid[2] - shavObj.getTranslation()[2]), 2));
         
-        
-        // crazy projection math, ignore for now
-                        //        // if distance between centroid and shaver is < fur_height, alter fur height
-                        //        // make fur height a face property
-                        //
-                        //        Cvec3 norm = g_headMesh.getFace(i).getNormal();
-                        //        Cvec3 facePt = g_headMesh.getFace(i).getVertex(0).getPosition(); // simply get a vertex on the plane / face
-                        //
-                        ////        Cvec3 norm = (shavObj * RigTForm (g_headMesh.getFace(i).getNormal())).getTranslation();
-                        ////        Cvec3 facePt = (shavObj * RigTForm (g_headMesh.getFace(i).getVertex(0).getPosition())).getTranslation(); // simply get a vertex on the plane / face
-                        //
-                        //        // displacement vector between clipper and facePt
-                        //        double t = ((norm[0] * (fabs(facePt[0] - shavObj.getTranslation()[0])) + norm[1] * fabs(facePt[1] - shavObj.getTranslation()[1]) + norm[2]* fabs(facePt[2] - shavObj.getTranslation()[2]))/ (pow(norm[0], 2) + pow(norm[1], 2) + pow(norm[2], 2)));
-                        //
-                        //
-                        //        // clipper center projected onto plane
-                        //        Cvec3 projV = Cvec3((shavObj.getTranslation()[0] + t * norm[0]), (shavObj.getTranslation()[1] + t * norm[1]), (shavObj.getTranslation()[2] + t * norm[2]));
-                        //
-                        //        // translate to world coordinates
-                        //        projV = (shavObj * RigTForm (projV)).getTranslation();
-                        //
-                        //        float dist = sqrt(pow((projV[0] - shavObj.getTranslation()[0]), 2) + pow((projV[1] - shavObj.getTranslation()[1]), 2) + pow((projV[1] - shavObj.getTranslation()[2]), 2));
-               
-//        cout << "distance b/e clip ctr, face ctr" << dist << endl;
-        
         if (dist < g_hairLengths[i]) {
-//            cout << "distance b/e clip ctr, face ctr" << dist << endl;
-//            cout << "cliper xpos" << shavObj.getTranslation()[0] << endl;
-//            cout << "cliper ypos" << shavObj.getTranslation()[1] << endl;
-//            cout << "cliper zpos" << shavObj.getTranslation()[2] << endl;
             g_hairLengths[i] = dist;
-//            g_headMesh.getFace(i).setHairHeight(0);
+
         }
         
         if (dist < .1) {
@@ -680,8 +514,22 @@ static void checkCutLength() {
             maxHairLen = g_hairLengths[i];
         }
         
+        sum_hairlens += g_hairLengths[i];
     }
     
+    if (((sum_hairlens / double(g_hairLengths.size())) < 0.25) || g_won == true) {
+        g_won = true;
+        cout << "YOU WIN" << endl;
+        cout << "YOU WIN" << endl;
+        cout << "YOU WIN" << endl;
+    }
+    
+    if (maxHairLen < 0.4) {
+        
+    }
+    
+    
+    // prevent clipping on nohair mesh
     for (int i = 0; i < g_headNoHairMesh.getNumFaces(); i++) {
         double cntr_x = 0;
         double cntr_y = 0;
@@ -701,6 +549,7 @@ static void checkCutLength() {
         float noHair_dist = sqrt(pow((centroid[0] - shavObj.getTranslation()[0]), 2) + pow((centroid[1] - shavObj.getTranslation()[1]), 2) + pow((centroid[2] - shavObj.getTranslation()[2]), 2));
         
         if (noHair_dist < .1) {
+
             RigTForm cur = g_shaverNode->getRbt();
             g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headNoHairMesh.getFace(i).getNormal()*.001), cur.getRotation()));
         }
@@ -708,12 +557,7 @@ static void checkCutLength() {
     
     
     
-    if (maxHairLen < 0.4) {
-        g_won = true;
-        cout << "YOU WIN" << endl;
-        cout << "YOU WIN" << endl;
-        cout << "YOU WIN" << endl;
-    }
+    
     
 }
 
@@ -802,31 +646,6 @@ static void pick() {
     glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
 
     checkGlErrors();
-}
-
-bool interpolateAndDisplay(float t) {
-    if (t > g_animator.getNumKeyFrames() - 3)
-        return true;
-    g_animator.animate(t);
-    return false;
-}
-
-static void animationUpdate() {
-    if (g_playingAnimation) {
-        bool endReached = interpolateAndDisplay((float) g_animateTime / g_msBetweenKeyFrames);
-        if (!endReached)
-            g_animateTime += 1000./g_framesPerSecond;
-        else {
-            cerr << "Finished playing animation" << endl;
-            g_curKeyFrame = g_animator.keyFramesEnd();
-            advance(g_curKeyFrame, -2);
-            g_animator.pushKeyFrameToSg(g_curKeyFrame);
-            g_playingAnimation = false;
-            g_animateTime = 0;
-            g_curKeyFrameNum = g_animator.getNumKeyFrames() - 2;
-            cerr << "Now at frame [" << g_curKeyFrameNum << "]" << endl;
-        }
-    }
 }
 
 static void reshape(GLFWwindow * window, const int w, const int h) {
@@ -964,9 +783,6 @@ static void motion(GLFWwindow *window, double x, double y) {
         target->setRbt(O);
     } else {
         target->setRbt(doMtoOwrtA(M, target->getRbt(), A));
-//        if (target == g_shaverNode) {
-//            g_cutNode->setRbt(doMtoOwrtA(M, target->getRbt(), A));
-//        }
     }
 
     g_mouseClickX += dx;
@@ -1002,287 +818,127 @@ static void mouse(GLFWwindow *window, int button, int state, int mods) {
 static void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
         switch (key) {
-        case GLFW_KEY_SPACE:
-            g_spaceDown = true;
-            break;
-        case GLFW_KEY_ESCAPE:
-            exit(0);
-        case GLFW_KEY_H:
-            cout << " ============== H E L P ==============\n"
-                 << "h   \t\thelp menu\n\n"
-                 << "Welcome to the barbershop! Your task is to give our client, Tyrion Lannister, the hair cut of his life as he prepares for the battle to defend his countrymen. Use the controls below and the mouse to save the kingdom. \n\n"
-                 << "w,a,s,d \t Move the clippers up and down and side to side. \n"
-                 << "z,x \t\t Move the clippers in and out. \n"
-                 << "r   \t\t Reset Tyrion's hair to have fun all over again!"
-                 << endl;
-            break;
-//        case GLFW_KEY_S:
-//            glFlush();
-//            writePpmScreenshot(g_windowWidth, g_windowHeight, "out.ppm");
-//            break;
-        case GLFW_KEY_V: {
-            shared_ptr<SgRbtNode> viewers[] = {g_skyNode, g_robot1Node,
-                                               g_robot2Node};
-            for (int i = 0; i < 3; ++i) {
-                if (g_currentCameraNode == viewers[i]) {
-                    g_currentCameraNode = viewers[(i + 1) % 3];
-                    break;
+            case GLFW_KEY_SPACE:
+                g_spaceDown = true;
+                break;
+            case GLFW_KEY_ESCAPE:
+                exit(0);
+            case GLFW_KEY_H:
+                cout << " ============== H E L P ==============\n"
+                << "h   \t\thelp menu\n\n"
+                << "Welcome to the barbershop! Your task is to give our client, Tyrion Lannister, the hair cut of his life as he prepares for the battle to defend his countrymen. Use the controls below and the mouse to save the kingdom. \n\n"
+                << "p\t\tUse mouse to select the clippers to  move or rotate them. \n"
+                << "w,a,s,d \t Move the clippers up and down and side to side. \n"
+                << "z,x \t\t Move the clippers in and out. \n"
+                << "r   \t\t Reset Tyrion's hair to have fun all over again!"
+                << endl;
+                break;
+
+            case GLFW_KEY_R: {
+                for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
+                    g_hairLengths[i] = g_furHeight;
                 }
-            }
-        } break;
-        case GLFW_KEY_R: {
-            for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
-                g_hairLengths[i] = g_furHeight;
-            }
-        } break;
-        case GLFW_KEY_P:
-            g_pickingMode = !g_pickingMode;
-            cerr << "Picking mode is " << (g_pickingMode ? "on" : "off") << endl;
-            break;
-        case GLFW_KEY_M:
-            g_activeCameraFrame = SkyMode((g_activeCameraFrame + 1) % 2);
-            cerr << "Editing sky eye w.r.t. "
-                 << (g_activeCameraFrame == WORLD_SKY ? "world-sky frame\n"
-                     : "sky-sky frame\n")
-                 << endl;
-            break;
-//        case GLFW_KEY_A:
-//            g_displayArcball = !g_displayArcball;
-//            break;
-        case GLFW_KEY_U:
-            if (g_playingAnimation) {
-                cerr << "Cannot operate when playing animation" << endl;
+                g_won = false;
+            } break;
+            case GLFW_KEY_P:
+                g_pickingMode = !g_pickingMode;
+                cerr << "Picking mode is " << (g_pickingMode ? "on" : "off") << endl;
                 break;
-            }
-
-            if (g_curKeyFrame ==
-                g_animator
-                .keyFramesEnd()) { // only possible when frame list is empty
-                cerr << "Create new frame [0]." << endl;
-                g_curKeyFrame = g_animator.insertEmptyKeyFrameAfter(
-                                                                    g_animator.keyFramesBegin());
-                g_curKeyFrameNum = 0;
-            }
-            cerr << "Copying scene graph to current frame [" << g_curKeyFrameNum
-                 << "]" << endl;
-            g_animator.pullKeyFrameFromSg(g_curKeyFrame);
-            break;
-        case GLFW_KEY_N:
-            if (g_playingAnimation) {
-                cerr << "Cannot operate when playing animation" << endl;
-                break;
-            }
-            if (g_animator.getNumKeyFrames() != 0)
-                ++g_curKeyFrameNum;
-            g_curKeyFrame = g_animator.insertEmptyKeyFrameAfter(g_curKeyFrame);
-            g_animator.pullKeyFrameFromSg(g_curKeyFrame);
-            cerr << "Create new frame [" << g_curKeyFrameNum << "]" << endl;
-            break;
-        case GLFW_KEY_C:
-            if (g_playingAnimation) {
-                cerr << "Cannot operate when playing animation" << endl;
-                break;
-            }
-            if (g_curKeyFrame != g_animator.keyFramesEnd()) {
-                cerr << "Loading current key frame [" << g_curKeyFrameNum
-                     << "] to scene graph" << endl;
-                g_animator.pushKeyFrameToSg(g_curKeyFrame);
-            } else {
-                cerr << "No key frame defined" << endl;
-            }
-            break;
-//        case GLFW_KEY_D:
-//            if (g_playingAnimation) {
-//                cerr << "Cannot operate when playing animation" << endl;
-//                break;
-//            }
-//            if (g_curKeyFrame != g_animator.keyFramesEnd()) {
-//                Animator::KeyFrameIter newCurKeyFrame = g_curKeyFrame;
-//                cerr << "Deleting current frame [" << g_curKeyFrameNum << "]"
-//                     << endl;
-//                ;
-//                if (g_curKeyFrame == g_animator.keyFramesBegin()) {
-//                    ++newCurKeyFrame;
-//                } else {
-//                    --newCurKeyFrame;
-//                    --g_curKeyFrameNum;
-//                }
-//                g_animator.deleteKeyFrame(g_curKeyFrame);
-//                g_curKeyFrame = newCurKeyFrame;
-//                if (g_curKeyFrame != g_animator.keyFramesEnd()) {
-//                    g_animator.pushKeyFrameToSg(g_curKeyFrame);
-//                    cerr << "Now at frame [" << g_curKeyFrameNum << "]" << endl;
-//                } else
-//                    cerr << "No frames defined" << endl;
-//            } else {
-//                cerr << "Frame list is now EMPTY" << endl;
-//            }
-//            break;
-        case GLFW_KEY_PERIOD: // >
-            if (!(mods & GLFW_MOD_SHIFT)) break;
-            if (g_playingAnimation) {
-                cerr << "Cannot operate when playing animation" << endl;
-                break;
-            }
-            if (g_curKeyFrame != g_animator.keyFramesEnd()) {
-                if (++g_curKeyFrame == g_animator.keyFramesEnd())
-                    --g_curKeyFrame;
-                else {
-                    ++g_curKeyFrameNum;
-                    g_animator.pushKeyFrameToSg(g_curKeyFrame);
-                    cerr << "Stepped forward to frame [" << g_curKeyFrameNum << "]"
-                         << endl;
+                
+            case GLFW_KEY_RIGHT:
+                for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
+                    g_hairLengths[i] *= 1.05;
                 }
-            }
-            break;
-        case GLFW_KEY_COMMA: // <
-            if (!(mods & GLFW_MOD_SHIFT)) break;
-            if (g_playingAnimation) {
-                cerr << "Cannot operate when playing animation" << endl;
+                
+                updateShellGeometry();
                 break;
-            }
-            if (g_curKeyFrame != g_animator.keyFramesBegin()) {
-                --g_curKeyFrame;
-                --g_curKeyFrameNum;
-                g_animator.pushKeyFrameToSg(g_curKeyFrame);
-                cerr << "Stepped backward to frame [" << g_curKeyFrameNum << "]"
-                     << endl;
-            }
-            break;
-//        case GLFW_KEY_W:
-//            cerr << "Writing animation to animation.txt\n";
-//            g_animator.saveAnimation("animation.txt");
-//            break;
-        case GLFW_KEY_I:
-            if (g_playingAnimation) {
-                cerr << "Cannot operate when playing animation" << endl;
-                break;
-            }
-            cerr << "Reading animation from animation.txt\n";
-            g_animator.loadAnimation("animation.txt");
-            g_curKeyFrame = g_animator.keyFramesBegin();
-            cerr << g_animator.getNumKeyFrames() << " frames read.\n";
-            if (g_curKeyFrame != g_animator.keyFramesEnd()) {
-                g_animator.pushKeyFrameToSg(g_curKeyFrame);
-                cerr << "Now at frame [0]" << endl;
-            }
-            g_curKeyFrameNum = 0;
-            break;
-        case GLFW_KEY_MINUS:
-            g_msBetweenKeyFrames = min(g_msBetweenKeyFrames + 100, 10000);
-            cerr << g_msBetweenKeyFrames << " ms between keyframes.\n";
-            break;
-        case GLFW_KEY_EQUAL: // +
-            if (!(mods & GLFW_MOD_SHIFT)) break;
-            g_msBetweenKeyFrames = max(g_msBetweenKeyFrames - 100, 100);
-            cerr << g_msBetweenKeyFrames << " ms between keyframes.\n";
-            break;
-        case GLFW_KEY_Y:
-            if (!g_playingAnimation) {
-                if (g_animator.getNumKeyFrames() < 4) {
-                    cerr << " Cannot play animation with less than 4 keyframes."
-                         << endl;
-                } else {
-                    g_playingAnimation = true;
-                    cerr << "Playing animation... " << endl;
+            case GLFW_KEY_LEFT:
+                for (int i = 0; i < g_headMesh.getNumFaces(); i++) {
+                    g_hairLengths[i] /= 1.05;
                 }
-            } else {
-                cerr << "Stopping animation... " << endl;
-                g_playingAnimation = false;
+                
+                updateShellGeometry();
+                break;
+            case GLFW_KEY_UP:
+                g_hairyness *= 1.05;
+                cerr << "hairyness = " << g_hairyness << std::endl;
+                updateShellGeometry();
+                break;
+            case GLFW_KEY_DOWN:
+                g_hairyness /= 1.05;
+                cerr << "hairyness = " << g_hairyness << std::endl;
+                updateShellGeometry();
+                break;
+            case GLFW_KEY_W: {
+                // move clipper deeper
+                RigTForm M = RigTForm(Cvec3(0, depthSpd, 0));
+                RigTForm A = makeMixedFrame(getArcballRbt(),
+                                            getPathAccumRbt(g_world, g_currentCameraNode));
+                A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+                g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+                
             }
-            break;
-        case GLFW_KEY_RIGHT:
-            g_furHeight *= 1.05;
-            cerr << "fur height = " << g_furHeight << std::endl;
-            updateShellGeometry();
-            break;
-        case GLFW_KEY_LEFT:
-            g_furHeight /= 1.05;
-            std::cerr << "fur height = " << g_furHeight << std::endl;
-            updateShellGeometry();
-            break;
-        case GLFW_KEY_UP:
-            g_hairyness *= 1.05;
-            cerr << "hairyness = " << g_hairyness << std::endl;
-            updateShellGeometry();
-            break;
-        case GLFW_KEY_DOWN:
-            g_hairyness /= 1.05;
-            cerr << "hairyness = " << g_hairyness << std::endl;
-            updateShellGeometry();
-            break;
-        case GLFW_KEY_W: {
-            // move clipper deeper
-            cout << "moved by " << depthSpd << endl;
-            RigTForm M = RigTForm(Cvec3(0, depthSpd, 0));
-            RigTForm A = makeMixedFrame(getArcballRbt(),
-                                        getPathAccumRbt(g_world, g_currentCameraNode));
-            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
-            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
-
+                break;
+            case GLFW_KEY_S: {
+                RigTForm M = RigTForm(Cvec3(0, -depthSpd, 0));
+                RigTForm A = makeMixedFrame(getArcballRbt(),
+                                            getPathAccumRbt(g_world, g_currentCameraNode));
+                A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+                g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+                
             }
-            break;
-        case GLFW_KEY_S: {
-            // move clipper deeper
-            cout << "moved by " << depthSpd << endl;
-            RigTForm M = RigTForm(Cvec3(0, -depthSpd, 0));
-            RigTForm A = makeMixedFrame(getArcballRbt(),
-                                        getPathAccumRbt(g_world, g_currentCameraNode));
-            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
-            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
-
+                break;
+            case GLFW_KEY_A: {
+                // move clipper deeper
+                // We created a translation RigTForm M which was responsible for movement in the x,y,z directions.
+                // Then, we calculated an auxiliary mixed frame between the arcball Rbt and the accumulated rbt from world
+                // to our current perspective. We redefine our auxiliary mixed frame A by inverting the accumulated rbt from the world to the shave node and left-multiplying
+                // by its previous value (defined above). Finally, we apply our translation M to our trimmer rbt with respect to our auxiliary mixed frame A. In plain english, we ensure sure that our keyboard movements are intuitive by defining them in terms of the current perspective.
+                
+                RigTForm M = RigTForm(Cvec3(-depthSpd, 0, 0));
+                RigTForm A = makeMixedFrame(getArcballRbt(),
+                                            getPathAccumRbt(g_world, g_currentCameraNode));
+                A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+                g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+                
             }
-            break;
-        case GLFW_KEY_A: {
-            // move clipper deeper
-            cout << "moved by " << depthSpd << endl;
-            RigTForm M = RigTForm(Cvec3(-depthSpd, 0, 0));
-            RigTForm A = makeMixedFrame(getArcballRbt(),
-                                        getPathAccumRbt(g_world, g_currentCameraNode));
-            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
-            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
-
+                break;
+            case GLFW_KEY_D: {
+                // move clipper deeper
+                RigTForm M = RigTForm(Cvec3(depthSpd, 0, 0));
+                RigTForm A = makeMixedFrame(getArcballRbt(),
+                                            getPathAccumRbt(g_world, g_currentCameraNode));
+                A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+                g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+                
             }
-            break;
-        case GLFW_KEY_D: {
-            // move clipper deeper
-            cout << "moved by " << depthSpd << endl;
-            RigTForm M = RigTForm(Cvec3(depthSpd, 0, 0));
-            RigTForm A = makeMixedFrame(getArcballRbt(),
-                                        getPathAccumRbt(g_world, g_currentCameraNode));
-            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
-            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
-
+                break;
+            case GLFW_KEY_Z: {
+                // move clipper deeper
+                RigTForm M = RigTForm(Cvec3(0, 0, -depthSpd));
+                RigTForm A = makeMixedFrame(getArcballRbt(),
+                                            getPathAccumRbt(g_world, g_currentCameraNode));
+                A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+                g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+                
             }
-            break;
-        case GLFW_KEY_Z: {
-            // move clipper deeper
-            cout << "moved by " << depthSpd << endl;
-            RigTForm M = RigTForm(Cvec3(0, 0, -depthSpd));
-            RigTForm A = makeMixedFrame(getArcballRbt(),
-                                        getPathAccumRbt(g_world, g_currentCameraNode));
-            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
-            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
-
+                break;
+            case GLFW_KEY_X: {
+                // pull clipper out
+                
+                RigTForm M = RigTForm(Cvec3(0, 0, depthSpd));
+                RigTForm A = makeMixedFrame(getArcballRbt(),
+                                            getPathAccumRbt(g_world, g_currentCameraNode));
+                A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
+                g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
+                
             }
-            break;
-        case GLFW_KEY_X: {
-            // pull clipper out
-
-            RigTForm M = RigTForm(Cvec3(0, 0, depthSpd));
-            RigTForm A = makeMixedFrame(getArcballRbt(),
-                                        getPathAccumRbt(g_world, g_currentCameraNode));
-            A = inv(getPathAccumRbt(g_world, g_shaverNode, 1)) * A;
-            g_shaverNode->setRbt(doMtoOwrtA(M, g_shaverNode->getRbt(), A));
-
-            }
-            break;
-        case GLFW_KEY_K: {
-            // cheat code to win
-            g_won = true;
-        }break;
+                break;
+            case GLFW_KEY_K: {
+                // cheat code to win
+                g_won = true;
+            }break;
         }
-    
     } else {
         switch(key) {
         case GLFW_KEY_SPACE:
@@ -1291,9 +947,6 @@ static void keyboard(GLFWwindow* window, int key, int scancode, int action, int 
         }
     }
 
-    // Sanity check that our g_curKeyFrameNum is in sync with the g_curKeyFrame
-    if (g_animator.getNumKeyFrames() > 0)
-        assert(g_animator.getNthKeyFrame(g_curKeyFrameNum) == g_curKeyFrame);
 }
 
 void error_callback(int error, const char* description) {
@@ -1527,11 +1180,6 @@ static void initScene() {
     g_groundNode->addChild(
         shared_ptr<MyShapeNode>(new MyShapeNode(g_ground, g_bumpFloorMat)));
 
-    //g_robot1Node.reset(new SgRbtNode(RigTForm(Cvec3(0, 0, 0))));
-    //g_robot2Node.reset(new SgRbtNode(RigTForm(Cvec3(2, 1, 0))));
-
-    //constructRobot(g_robot1Node, g_redDiffuseMat);  // a Red robot
-    //constructRobot(g_robot2Node, g_blueDiffuseMat); // a Blue robot
 
     g_headNode.reset(new SgRbtNode(RigTForm(Cvec3(0, 4.4, 1))));
 
@@ -1592,10 +1240,10 @@ static void initScene() {
     g_currentCameraNode = g_skyNode;
 }
 
-static void initAnimation() {
-    g_animator.attachSceneGraph(g_world);
-    g_curKeyFrame = g_animator.keyFramesBegin();
-}
+//static void initAnimation() {
+//    g_animator.attachSceneGraph(g_world);
+//    g_curKeyFrame = g_animator.keyFramesBegin();
+//}
 
 
 static void glfwLoop() {
@@ -1605,7 +1253,7 @@ static void glfwLoop() {
         double thisTime = glfwGetTime();
         if( thisTime - g_lastFrameClock >= 1. / g_framesPerSecond) {
 
-            animationUpdate();
+//            animationUpdate();
             g_lastFrameClock = glfwGetTime();
 
             checkCutLength();
@@ -1638,10 +1286,9 @@ int main(int argc, char *argv[]) {
         initMaterials();
         initGeometry();
         initScene();
-        initAnimation();
+//        initAnimation();
         initSimulation();
         updateShellGeometry();
-//        checkCutLength();
 
         glfwLoop();
         return 0;
