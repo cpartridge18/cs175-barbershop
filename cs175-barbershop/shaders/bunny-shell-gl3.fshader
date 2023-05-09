@@ -31,9 +31,9 @@ void main() {
   u = 1.0 - u*u;
   v = pow(1.0 - v*v, 16.0);
 
-  float r = 0.009+ .4 * u + 0.25* v;
-  float g = 0.009+ .2* u + 0.21* v;
-  float b = 0.009+ .1* u + 0.21* v;
+  float r = 0.009 + .29 * u + 0.29* v;
+  float g = 0.009+ .21 * u + 0.21* v;
+  float b = 0.009+ .4 * u + 0.4 * v;
 
   float alpha = pow(texture(uTexShell, vTexCoord).r, uAlphaExponent);
 

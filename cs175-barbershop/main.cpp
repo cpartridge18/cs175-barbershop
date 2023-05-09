@@ -506,7 +506,7 @@ static void checkCutLength() {
         
         if (dist < .1) {
             RigTForm cur = g_shaverNode->getRbt();
-            g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headMesh.getFace(i).getNormal()*.01), cur.getRotation()));
+            g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headMesh.getFace(i).getNormal()*.005), cur.getRotation()));
         } 
         
         // after updating hair length, update maximum hair length
@@ -531,8 +531,6 @@ static void checkCutLength() {
     
     // prevent clipping on nohair mesh
     for (int i = 0; i < g_headNoHairMesh.getNumFaces(); i++) {
-       
-        
         double cntr_x = 0;
         double cntr_y = 0;
         double cntr_z = 0;
@@ -555,7 +553,6 @@ static void checkCutLength() {
             RigTForm cur = g_shaverNode->getRbt();
             g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headNoHairMesh.getFace(i).getNormal()*.001), cur.getRotation()));
         }
-        
     }
     
     
