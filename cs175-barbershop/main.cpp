@@ -672,7 +672,7 @@ static void checkCutLength() {
         
         if (dist < .1) {
             RigTForm cur = g_shaverNode->getRbt();
-            g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headMesh.getFace(i).getNormal()*.01), cur.getRotation()));
+            g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headMesh.getFace(i).getNormal()*.005), cur.getRotation()));
         } 
         
         // after updating hair length, update maximum hair length
@@ -683,8 +683,6 @@ static void checkCutLength() {
     }
     
     for (int i = 0; i < g_headNoHairMesh.getNumFaces(); i++) {
-       
-        
         double cntr_x = 0;
         double cntr_y = 0;
         double cntr_z = 0;
@@ -703,11 +701,9 @@ static void checkCutLength() {
         float noHair_dist = sqrt(pow((centroid[0] - shavObj.getTranslation()[0]), 2) + pow((centroid[1] - shavObj.getTranslation()[1]), 2) + pow((centroid[2] - shavObj.getTranslation()[2]), 2));
         
         if (noHair_dist < .1) {
-            cerr << "does this happen?" << "\n";
             RigTForm cur = g_shaverNode->getRbt();
             g_shaverNode->setRbt(RigTForm(cur.getTranslation() + (g_headNoHairMesh.getFace(i).getNormal()*.001), cur.getRotation()));
         }
-        
     }
     
     
