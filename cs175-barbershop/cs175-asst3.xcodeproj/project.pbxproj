@@ -113,7 +113,6 @@
 		4E5E73F92A0422AE005B20D2 /* texture.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = texture.cpp; sourceTree = "<group>"; };
 		4E5E73FA2A0422AE005B20D2 /* cs175-barbershop.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "cs175-barbershop.xcodeproj"; sourceTree = "<group>"; };
 		4E5E74002A0422AE005B20D2 /* geometry.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = geometry.o; sourceTree = "<group>"; };
-		4E5E74012A0422AE005B20D2 /* FieldstoneNormal.ppm */ = {isa = PBXFileReference; lastKnownFileType = text; path = FieldstoneNormal.ppm; sourceTree = "<group>"; };
 		4E5E74022A0422AF005B20D2 /* shell.ppm */ = {isa = PBXFileReference; lastKnownFileType = text; path = shell.ppm; sourceTree = "<group>"; };
 		4E5E74032A0422AF005B20D2 /* texture.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = texture.o; sourceTree = "<group>"; };
 		4E5E74042A0422AF005B20D2 /* geometrymaker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = geometrymaker.h; sourceTree = "<group>"; };
@@ -129,7 +128,6 @@
 		4E5E740F2A0422AF005B20D2 /* picker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = picker.cpp; sourceTree = "<group>"; };
 		4E5E74102A0422AF005B20D2 /* geometry.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = geometry.h; sourceTree = "<group>"; };
 		4E5E74112A0422AF005B20D2 /* scenegraph.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = scenegraph.h; sourceTree = "<group>"; };
-		4E5E74122A0422AF005B20D2 /* Fieldstone.ppm */ = {isa = PBXFileReference; lastKnownFileType = text; path = Fieldstone.ppm; sourceTree = "<group>"; };
 		4E5E74132A0422AF005B20D2 /* asstcommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = asstcommon.h; sourceTree = "<group>"; };
 		4E5E74142A0422AF005B20D2 /* sgutils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sgutils.h; sourceTree = "<group>"; };
 		4E5E74152A0422AF005B20D2 /* picker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = picker.h; sourceTree = "<group>"; };
@@ -175,15 +173,9 @@
 		4E5E743F2A0422B0005B20D2 /* picker.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = picker.o; sourceTree = "<group>"; };
 		4E5E74402A0422B0005B20D2 /* drawer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = drawer.h; sourceTree = "<group>"; };
 		4E5E74412A0422B0005B20D2 /* glsupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = glsupport.h; sourceTree = "<group>"; };
-		4E5E744C2A056DD4005B20D2 /* output.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = output.mesh; sourceTree = "<group>"; };
-		4E5E744E2A05880E005B20D2 /* tyrion.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion.mesh; sourceTree = "<group>"; };
-		4E5E744F2A058B28005B20D2 /* tyrion_head.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_head.mesh; sourceTree = "<group>"; };
 		4E5E74502A0597EE005B20D2 /* tyrion_nohair.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_nohair.mesh; sourceTree = "<group>"; };
-		4E5E74512A05A000005B20D2 /* trimmer.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = trimmer.mesh; sourceTree = "<group>"; };
 		4E5E74522A05AC36005B20D2 /* tyrionhead.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrionhead.mesh; sourceTree = "<group>"; };
 		4E5E74532A08612F005B20D2 /* trimmer2.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = trimmer2.mesh; sourceTree = "<group>"; };
-		4E5E74542A089AB5005B20D2 /* tyrion_head2.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_head2.mesh; sourceTree = "<group>"; };
-		4E5E74552A089B70005B20D2 /* tyrion_head3.mesh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tyrion_head3.mesh; sourceTree = "<group>"; };
 		4EDCBCCD29D77FDC00FC3596 /* libglfw.3.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libglfw.3.3.dylib; sourceTree = "<group>"; };
 		4EDCBCCE29D77FDC00FC3596 /* libGLEW.2.2.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libGLEW.2.2.0.dylib; sourceTree = "<group>"; };
 		4EF929CF29B7D89B0046FAC1 /* libGLEW.2.2.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGLEW.2.2.0.dylib; path = ../../../../../../usr/local/Cellar/glew/2.2.0_1/lib/libGLEW.2.2.0.dylib; sourceTree = "<group>"; };
@@ -379,8 +371,6 @@
 				4E5E741D2A0422AF005B20D2 /* cube.mesh */,
 				4E5E73BF2A0422AE005B20D2 /* cvec.h */,
 				4E5E74402A0422B0005B20D2 /* drawer.h */,
-				4E5E74122A0422AF005B20D2 /* Fieldstone.ppm */,
-				4E5E74012A0422AE005B20D2 /* FieldstoneNormal.ppm */,
 				4E5E743D2A0422B0005B20D2 /* geometry.cpp */,
 				4E5E74102A0422AF005B20D2 /* geometry.h */,
 				4E5E74002A0422AE005B20D2 /* geometry.o */,
@@ -393,14 +383,9 @@
 				4E5E74092A0422AF005B20D2 /* lib */,
 				4E5E74072A0422AF005B20D2 /* main */,
 				4E5E741A2A0422AF005B20D2 /* main.cpp */,
-				4E5E74552A089B70005B20D2 /* tyrion_head3.mesh */,
-				4E5E74542A089AB5005B20D2 /* tyrion_head2.mesh */,
 				4E5E74532A08612F005B20D2 /* trimmer2.mesh */,
 				4E5E74522A05AC36005B20D2 /* tyrionhead.mesh */,
-				4E5E74512A05A000005B20D2 /* trimmer.mesh */,
 				4E5E74502A0597EE005B20D2 /* tyrion_nohair.mesh */,
-				4E5E744F2A058B28005B20D2 /* tyrion_head.mesh */,
-				4E5E744C2A056DD4005B20D2 /* output.mesh */,
 				4E5E741B2A0422AF005B20D2 /* main.o */,
 				4E5E74052A0422AF005B20D2 /* Makefile */,
 				4E5E74362A0422AF005B20D2 /* material.cpp */,
@@ -408,7 +393,6 @@
 				4E5E74382A0422AF005B20D2 /* material.o */,
 				4E5E740C2A0422AF005B20D2 /* matrix4.h */,
 				4E5E74172A0422AF005B20D2 /* mesh.h */,
-				4E5E744E2A05880E005B20D2 /* tyrion.mesh */,
 				4E5E743E2A0422B0005B20D2 /* mesh.interface */,
 				4E5E740F2A0422AF005B20D2 /* picker.cpp */,
 				4E5E74152A0422AF005B20D2 /* picker.h */,
